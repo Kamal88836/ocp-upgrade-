@@ -1,0 +1,425 @@
+[root@mirror2 mirror-reg]# ls -lrt
+total 1182148
+-rw-r--r--. 1 root root 706802330 Dec  7  2023 mirror-registry.tar.gz
+-rw-r--r--. 1 root root  65427852 Jun 13 01:10 openshift-client-linux.tar.gz
+-rw-r--r--. 1 root root 438279959 Jun 13 01:10 openshift-install-linux.tar.gz
+[root@mirror2 mirror-reg]#
+
+[root@mirror2 mirror-reg]# tar -xvf mirror-registry.tar.gz
+image-archive.tar
+execution-environment.tar
+mirror-registry
+[root@mirror2 mirror-reg]# 
+4.5. Install Local Mirror registry to mimic RHEL quay
+Create quay Collapse source
+
+
+[root@mirror2 mirror-reg]# sudo ./mirror-registry install --initUser sysadmin --initPassword samsung123
+
+   __   __
+  /  \ /  \     ______   _    _     __   __   __
+ / /\ / /\ \   /  __  \ | |  | |   /  \  \ \ / /
+/ /  / /  \ \  | |  | | | |  | |  / /\ \  \   /
+\ \  \ \  / /  | |__| | | |__| | / ____ \  | |
+ \ \/ \ \/ /   \_  ___/  \____/ /_/    \_\ |_|
+  \__/ \__/      \ \__
+                  \___\ by Red Hat
+ Build, Store, and Distribute your Containers
+
+INFO[2024-06-14 17:29:53] Install has begun
+INFO[2024-06-14 17:29:53] Found execution environment at /root/mirror-reg/execution-environment.tar
+INFO[2024-06-14 17:29:53] Loading execution environment from execution-environment.tar
+INFO[2024-06-14 17:30:00] Detected an installation to localhost
+INFO[2024-06-14 17:30:00] Did not find SSH key in default location. Attempting to set up SSH keys.
+INFO[2024-06-14 17:30:00] Generating SSH Key
+INFO[2024-06-14 17:30:00] Generated SSH Key at /root/.ssh/quay_installer
+INFO[2024-06-14 17:30:00] Adding key to ~/.ssh/authorized_keys
+INFO[2024-06-14 17:30:00] Successfully set up SSH keys
+INFO[2024-06-14 17:30:00] Attempting to set SELinux rules on /root/.ssh/quay_installer
+INFO[2024-06-14 17:30:00] Found image archive at /root/mirror-reg/image-archive.tar
+INFO[2024-06-14 17:30:00] Detected an installation to localhost
+INFO[2024-06-14 17:30:00] Unpacking image archive from /root/mirror-reg/image-archive.tar
+INFO[2024-06-14 17:30:01] Loading pause image archive from pause.tar
+INFO[2024-06-14 17:30:07] Loading redis image archive from redis.tar
+INFO[2024-06-14 17:30:12] Loading postgres image archive from postgres.tar
+INFO[2024-06-14 17:30:19] Loading Quay image archive from quay.tar
+INFO[2024-06-14 17:30:36] Attempting to set SELinux rules on image archive
+INFO[2024-06-14 17:30:36] Running install playbook. This may take some time. To see playbook output run the installer with -v (verbose) flag.
+INFO[2024-06-14 17:30:36] Detected an installation to localhost
+
+PLAY [Install Mirror Appliance] ******************************************************************************************************************************************************************************
+
+TASK [Gathering Facts] ***************************************************************************************************************************************************************************************
+ok: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Expand variables] *******************************************************************************************************************************************************************
+included: /runner/project/roles/mirror_appliance/tasks/expand-vars.yaml for root@mirror2.srib-lab-ocp.lan
+
+TASK [mirror_appliance : Expand pg_storage] ******************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Expand quay_root] *******************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Expand quay_storage] ****************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Set expanded variables] *************************************************************************************************************************************************************
+ok: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Install Dependencies] ***************************************************************************************************************************************************************
+included: /runner/project/roles/mirror_appliance/tasks/install-deps.yaml for root@mirror2.srib-lab-ocp.lan
+
+TASK [mirror_appliance : Create user service directory] ******************************************************************************************************************************************************
+ok: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Set SELinux Rules] ******************************************************************************************************************************************************************
+included: /runner/project/roles/mirror_appliance/tasks/set-selinux-rules.yaml for root@mirror2.srib-lab-ocp.lan
+
+TASK [mirror_appliance : Set container_manage_cgroup flag on and keep it persistent across reboots] **********************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Install Quay Pod Service] ***********************************************************************************************************************************************************
+included: /runner/project/roles/mirror_appliance/tasks/install-pod-service.yaml for root@mirror2.srib-lab-ocp.lan
+
+TASK [mirror_appliance : Copy Quay Pod systemd service file] *************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Check if pod pause image is loaded] *************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Pull Infra image] *******************************************************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Start Quay Pod service] *************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Autodetect Image Archive] ***********************************************************************************************************************************************************
+included: /runner/project/roles/mirror_appliance/tasks/autodetect-image-archive.yaml for root@mirror2.srib-lab-ocp.lan
+
+TASK [mirror_appliance : Checking for Image Archive] *********************************************************************************************************************************************************
+ok: [root@mirror2.srib-lab-ocp.lan -> localhost]
+
+TASK [mirror_appliance : Create install directory for image-archive.tar dest] ********************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Copy Images if /runner/image-archive.tar exists] ************************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Unpack Images if /runner/image-archive.tar exists] **********************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Loading Redis if redis.tar exists] **************************************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Loading Quay if quay.tar exists] ****************************************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Loading Postgres if postgres.tar exists] ********************************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Install Postgres Service] ***********************************************************************************************************************************************************
+included: /runner/project/roles/mirror_appliance/tasks/install-postgres-service.yaml for root@mirror2.srib-lab-ocp.lan
+
+TASK [mirror_appliance : Create necessary directory for Postgres persistent data] ****************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Set permissions on local storage directory] *****************************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Copy Postgres systemd service file] *************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Check if Postgres image is loaded] **************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Pull Postgres image] ****************************************************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Create Postgres Storage named volume] ***********************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Start Postgres service] *************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Wait for pg_trgm to be installed] ***************************************************************************************************************************************************
+FAILED - RETRYING: [root@mirror2.srib-lab-ocp.lan]: Wait for pg_trgm to be installed (20 retries left).
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Install Redis Service] **************************************************************************************************************************************************************
+included: /runner/project/roles/mirror_appliance/tasks/install-redis-service.yaml for root@mirror2.srib-lab-ocp.lan
+
+TASK [mirror_appliance : Copy Redis systemd service file] ****************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Check if Redis image is loaded] *****************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Pull Redis image] *******************************************************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Start Redis service] ****************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Install Quay Service] ***************************************************************************************************************************************************************
+included: /runner/project/roles/mirror_appliance/tasks/install-quay-service.yaml for root@mirror2.srib-lab-ocp.lan
+
+TASK [mirror_appliance : Create necessary directory for Quay local storage] **********************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Set permissions on local storage directory] *****************************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Create necessary directory for Quay config bundle] **********************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Copy Quay config.yaml file] *********************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Check if SSL Cert exists] ***********************************************************************************************************************************************************
+ok: [root@mirror2.srib-lab-ocp.lan -> localhost]
+
+TASK [mirror_appliance : Check if SSL Key exists] ************************************************************************************************************************************************************
+ok: [root@mirror2.srib-lab-ocp.lan -> localhost]
+
+TASK [mirror_appliance : Create necessary directory for Quay rootCA files] ***********************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Create OpenSSL Config] **************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Create root CA key] *****************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Create root CA pem] *****************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Create ssl key] *********************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Create CSR] *************************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Create self-signed cert] ************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Create chain cert] ******************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Replace ssl cert with chain cert] ***************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Copy SSL certificate] ***************************************************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Copy SSL key] ***********************************************************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Set permissions for key] ************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Set permissions for cert] ***********************************************************************************************************************************************************
+ok: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Copy Quay systemd service file] *****************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Check if Quay image is loaded] ******************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Pull Quay image] ********************************************************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Create Quay Storage named volume] ***************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Start Quay service] *****************************************************************************************************************************************************************
+changed: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Wait for Quay] **********************************************************************************************************************************************************************
+included: /runner/project/roles/mirror_appliance/tasks/wait-for-quay.yaml for root@mirror2.srib-lab-ocp.lan
+
+TASK [mirror_appliance : Waiting up to 3 minutes for Quay to become alive at https://mirror2.srib-lab-ocp.lan:8443/health/instance] **************************************************************************
+FAILED - RETRYING: [root@mirror2.srib-lab-ocp.lan]: Waiting up to 3 minutes for Quay to become alive at https://mirror2.srib-lab-ocp.lan:8443/health/instance (10 retries left).
+ok: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Create init user] *******************************************************************************************************************************************************************
+included: /runner/project/roles/mirror_appliance/tasks/create-init-user.yaml for root@mirror2.srib-lab-ocp.lan
+
+TASK [mirror_appliance : Creating init user at endpoint https://mirror2.srib-lab-ocp.lan:8443/api/v1/user/initialize] ****************************************************************************************
+ok: [root@mirror2.srib-lab-ocp.lan]
+
+TASK [mirror_appliance : Enable lingering for systemd user processes] ****************************************************************************************************************************************
+skipping: [root@mirror2.srib-lab-ocp.lan]
+
+PLAY RECAP ***************************************************************************************************************************************************************************************************
+root@mirror2.srib-lab-ocp.lan : ok=50   changed=31   unreachable=0    failed=0    skipped=17   rescued=0    ignored=0
+
+INFO[2024-06-14 17:31:36] Quay installed successfully, config data is stored in ~/quay-install
+INFO[2024-06-14 17:31:36] Quay is available at https://mirror2.srib-lab-ocp.lan:8443 with credentials (sysadmin, samsung123)
+[root@mirror2 mirror-reg]#
+-------------------------------------- Verify the folder---------------------------------------------
+[root@bastion mirror-reg]# ls -lart ~/quay-install
+total 8
+dr-xr-x---. 33 root root 4096 Jan  9 08:30 ..
+drwxr-xr-x   4 root root   44 Jan  9 08:30 .
+drwxr-xr-x   2 root root   60 Jan  9 08:30 quay-rootCA
+drwxr-xr-x   2 root root   90 Jan  9 08:30 quay-config
+[root@bastion mirror-reg]# rm -rf ^C
+
+4.6. Update local mirror cert to trusted list and check podman login 
+
+
+[root@mirror2 mirror-reg]# cd ..
+[root@mirror2 ~]# mkdir mirror-cert
+[root@mirror2 ~]# cd mirror-cert
+[root@mirror2 mirror-cert]#
+[root@mirror2 mirror-cert]# cp ~/quay-install/quay-rootCA/rootCA.pem .
+[root@mirror2 mirror-cert]#
+[root@mirror2 mirror-cert]#
+[root@mirror2 mirror-cert]# ls -lrt
+total 4
+-rw-r--r--. 1 root root 1383 Jun 14 17:35 rootCA.pem
+[root@mirror2 mirror-cert]#
+[root@mirror2 mirror-cert]# cp rootCA.pem /etc/pki/ca-trust/source/anchors/
+[root@mirror2 mirror-cert]# update-ca-trust
+[root@mirror2 mirror-cert]#
+[root@mirror2 mirror-cert]#
+[root@mirror2 mirror-cert]# podman login -u sysadmin -p samsung123 mirror2.srib-lab-ocp.lan:8443
+Login Succeeded!
+[root@mirror2 mirror-cert]#
+
+4.7. Download pull_secret.json (from link mentioned in step 4)  and install oc client 
+You may have to rename the downloaded pull_secret to "pull_secret.json"
+
+1.2.1 Install oc client and kubectl from ocp download page ( link is in step 4.1) 
+
+
+
+[root@mirror2 mirror-reg]# tar -xvf openshift-client-linux.tar.gz
+README.md
+oc
+kubectl
+[root@mirror2 mirror-reg]# mv oc /usr/local/bin
+[root@mirror2 mirror-reg]# mv kubectl /usr/local/bin
+[root@mirror2 mirror-reg]#
+1.2.2  Create base64 encoded mirror registry credential
+
+
+
+[root@mirror2 mirror-reg]# echo -n 'sysadmin:samsung123' | base64
+c3lzYWRtaW46c2Ftc3VuZzEyMw==
+[root@mirror2 mirror-reg]#
+1.2.3 add this credential inside your pull_secret.json using any editor
+
+your downloaded pull_secret.json may need formatting ( optional )
+
+
+
+[root@mirror2 mirror-reg]# cat pull_secret.json
+{
+        "auths": {
+                "mirror2.srib-lab-ocp.lan:8443": {
+                        "auth": "c3lzYWRtaW46c2Ftc3VuZzEyMw=="
+                },
+                "cloud.openshift.com": {
+                        "auth": "..."
+                },
+                "quay.io": {
+                        "auth": "..."
+                },
+                "registry.connect.redhat.com": {
+                        "auth": "..."
+                },
+                "registry.redhat.io": {
+                        "auth": "..."
+                }
+        }
+}
+[root@mirror2 mirror-reg]#
+4.8. Start mirroring
+
+
+[root@mirror2 mirror-reg]# export OCP_RELEASE="4.14.30"
+[root@mirror2 mirror-reg]# export LOCAL_REGISTRY="mirror2.srib-lab-ocp.lan:8443"
+[root@mirror2 mirror-reg]# export LOCAL_REPOSITORY="ocp4/openshift4"
+[root@mirror2 mirror-reg]# export PRODUCT_REPO="openshift-release-dev"
+[root@mirror2 mirror-reg]# export LOCAL_SECRET_JSON="./pull_secret.json"
+[root@mirror2 mirror-reg]# export RELEASE_NAME="ocp-release"
+[root@mirror2 mirror-reg]# export ARCHITECTURE="x86_64"
+[root@mirror2 mirror-reg]#
+[root@mirror2 mirror-reg]#
+[root@mirror2 mirror-reg]# oc adm release mirror -a ${LOCAL_SECRET_JSON} --from=quay.io/${PRODUCT_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-${ARCHITECTURE} --to=${LOCAL_REGISTRY}/${LOCAL_REPOSITORY} --to-release-image=${LOCAL_REGISTRY}/${LOCAL_REPOSITORY}:${OCP_RELEASE}-${ARCHITECTURE}
+1.3.1 On completion :
+
+
+
+info: Mirroring completed in 37m6.53s (8.959MB/s)
+
+Success
+Update image:  mirror2.srib-lab-ocp.lan:8443/ocp4/openshift4:4.14.30-x86_64
+Mirror prefix: mirror2.srib-lab-ocp.lan:8443/ocp4/openshift4
+Mirror prefix: mirror2.srib-lab-ocp.lan:8443/ocp4/openshift4:4.14.30-x86_64
+
+To use the new mirrored repository to install, add the following section to the install-config.yaml:
+
+imageContentSources:
+- mirrors:
+  - mirror2.srib-lab-ocp.lan:8443/ocp4/openshift4
+  source: quay.io/openshift-release-dev/ocp-release
+- mirrors:
+  - mirror2.srib-lab-ocp.lan:8443/ocp4/openshift4
+  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+
+
+To use the new mirrored repository for upgrades, use the following to create an ImageContentSourcePolicy:
+
+apiVersion: operator.openshift.io/v1alpha1
+kind: ImageContentSourcePolicy
+metadata:
+  name: example
+spec:
+  repositoryDigestMirrors:
+  - mirrors:
+    - mirror2.srib-lab-ocp.lan:8443/ocp4/openshift4
+    source: quay.io/openshift-release-dev/ocp-release
+  - mirrors:
+    - mirror2.srib-lab-ocp.lan:8443/ocp4/openshift4
+    source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+[root@mirror2 mirror-reg]#
+[root@mirror2 mirror-reg]#
+[root@mirror2 mirror-reg]#
+4.9. open port 8443 as the registry service runs on this port.
+
+
+ firewall-cmd --add-port=8443/tcp --permanent
+4.10. To create the installation program that is based on the content that you mirrored, extract it and pin it to the release ( this will create "openshift-install" file.)
+
+
+[root@mirror2 mirror-reg]# tar -xvf openshift-install-linux.tar.gz
+README.md
+openshift-install
+[root@mirror2 mirror-reg]#
+[root@mirror2 mirror-reg]# oc adm release extract -a ${LOCAL_SECRET_JSON} --command=openshift-install "${LOCAL_REGISTRY}/${LOCAL_REPOSITORY}:${OCP_RELEASE}-${ARCHITECTURE}"
+[root@mirror2 mirror-reg]# 
+4.11. Copy and keep this updated "openshift-install" file. For Any ocp cluster installation using mirror2 as local registry use this binary 
+
+
+[root@mirror2 ~]# mkdir mirror-openshift-install
+[root@mirror2 ~]# cp mirror-reg/openshift-install mirror-openshift-install/.
+[root@mirror2 ~]# cd mirror-openshift-install
+[root@mirror2 mirror-openshift-install]# ls -lrt
+total 645724
+-rwxr-xr-x. 1 root root 661215032 Jun 14 20:43 openshift-install
+[root@mirror2 mirror-openshift-install]#
+4.12. Copy pull_secret to docket config
+
+
+
+[root@mirror2 mirror-reg]# mkdir ~/.docker/
+[root@mirror2 mirror-reg]# cp pull_secret.json ~/.docker/config.json
+[root@mirror2 mirror-reg]#
+[root@mirror2 mirror-reg]# ls -lrt ~/.docker/
+total 4
+-rw-------. 1 root root 2793 Jun 14 21:07 config.json
+[root@mirror2 mirror-reg]#
