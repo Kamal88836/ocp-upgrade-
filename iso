@@ -1,0 +1,390 @@
+srib@ocp-haproxy-4:~$ ARCH=x86_64
+srib@ocp-haproxy-4:~/ocp-isoMNO$ echo $ISO_URL
+https://rhcos.mirror.openshift.com/art/storage/prod/streams/4.18-9.4/builds/418.94.202508060022-0/x86_64/rhcos-418.94.202508060022-0-live.x86_64.iso
+
+srib@ocp-haproxy-4:~/$ cd ocp_isoMNO
+srib@ocp-haproxy-4:~/ocp-isoMNO$
+srib@ocp-haproxy-4:~/ocp-isoMNO$ wget https://rhcos.mirror.openshift.com/art/storage/prod/streams/4.18-9.4/builds/418.94.202508060022-0/x86_64/rhcos-418.94.202508060022-0-live.x86_64.iso
+--2026-01-09 13:30:26--  https://rhcos.mirror.openshift.com/art/storage/prod/streams/4.18-9.4/builds/418.94.202508060022-0/x86_64/rhcos-418.94.202508060022-0-live.x86_64.iso
+Resolving rhcos.mirror.openshift.com (rhcos.mirror.openshift.com)... 99.86.182.84, 99.86.182.123, 99.86.182.47, ...
+Connecting to rhcos.mirror.openshift.com (rhcos.mirror.openshift.com)|99.86.182.84|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 1331691520 (1.2G) [application/x-iso9660-image]
+Saving to: ‘rhcos-418.94.202508060022-0-live.x86_64.iso’
+
+rhcos-418.94.202508060022-0-live.x86 100%[====================================================================>]   1.24G  9.00MB/s    in 2m 15s
+
+2026-01-09 13:32:41 (9.43 MB/s) - ‘rhcos-418.94.202508060022-0-live.x86_64.iso’ saved [1331691520/1331691520]
+
+
+srib@ocp-haproxy-4:~/ocp-isoMNO$ ls -lart
+total 5846728
+-rw-rw-r--  1 srib srib 1331691520 Aug  6 02:40 rhcos-418.94.202508060022-0-live.x86_64.iso
+-rw-rw-r--  1 srib srib        483 Jan  7 07:37 boot-enp0s8.nmconnection
+-rwxrwxrwx  1 srib srib   12210104 Jan  7 07:43 coreos-installer
+-rw-rw-r--  1 srib srib        479 Jan  7 07:43 m1-ens1f0.nmconnection
+-rw-rw-r--  1 srib srib        481 Jan  7 07:45 m2-ens1f0.nmconnection
+-rw-rw-r--  1 srib srib        481 Jan  7 07:46 m3-ens1f0.nmconnection
+2.  Get coreos-installer
+
+
+srib@ocp-haproxy-4:~/ocp-iso$ wget https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/coreos-installer/v0.17.0-2/coreos-installer_amd64
+--2024-11-22 12:11:29--  https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/coreos-installer/v0.17.0-2/coreos-installer_amd64
+Resolving mirror.openshift.com (mirror.openshift.com)... 3.164.85.21, 3.164.85.123, 3.164.85.86, ...
+Connecting to mirror.openshift.com (mirror.openshift.com)|3.164.85.21|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 13541216 (13M) [binary/octet-stream]
+Saving to: ‘coreos-installer_amd64’
+
+coreos-installer_amd64                              100%[=================================================================================================================>]  12.91M  9.80MB/s    in 1.3s
+
+2024-11-22 12:11:31 (9.80 MB/s) - ‘coreos-installer_amd64’ saved [13541216/13541216]
+
+srib@ocp-haproxy-4:~/ocp-iso$
+
+
+srib@ocp-haproxy-4:~/ocp-iso$ mv coreos-installer_amd64 coreos-installer
+srib@ocp-haproxy-4:~/ocp-iso$ sudo chmod +x coreos-installer
+3.  Create Connection Files for bootstrap and the 3 master nodes based on network plan (choose EITHER step 3.1 OR 3.2 to create the connection files)
+3.1.  create bond interfaces in master nodes to have redundancy
+
+
+
+
+boot-enp0s3.nmconnection Collapse source
+
+
+[connection]
+id=enp0s3
+autoconnect-priority=-100
+autoconnect-retries=1
+type=ethernet
+multi-connect=1
+interface-name=enp0s3
+
+[ethernet]
+mtu=8500
+
+[ipv4]
+address1=70.1.1.124/23,70.1.1.1
+dns=70.1.1.82;
+dns-search=srib-lab-ocp.lan;
+method=manual
+
+[ipv6]
+address1=2405:100:200:70::1:557/64,2405:100:200:70::1
+dns=2405:100:200:70::1:1769;
+dns-search=srib-lab-ocp.lan;
+method=manual
+
+[route]
+routes=71.1.0.0/23 via 70.1.1.1
+
+[route6]
+routes=2405:100:200:71::/64 via 2405:100:200:70::1
+m1-bond0.nmconnection Collapse source
+
+
+[connection]
+id=bond0
+autoconnect-priority=-100
+autoconnect-retries=1
+type=bond
+interface-name=bond0
+multi-connect=1
+
+[ethernet]
+mtu=8500
+
+[bond]
+miimon=100
+mode=active-backup
+
+[ipv4]
+address1=71.1.1.5/23,71.1.0.1
+dns=70.1.1.82;
+dns-search=srib-lab-ocp.lan;
+method=manual
+
+[ipv6]
+address1=2405:100:200:71::1:552/64,2405:100:200:71::1
+dns=2405:100:200:70::1:1769;
+dns-search=srib-lab-ocp.lan;
+method=manual
+m2-bond0.nmconnection Collapse source
+
+
+[connection]
+id=bond0
+autoconnect-priority=-100
+autoconnect-retries=1
+type=bond
+interface-name=bond0
+multi-connect=1
+
+[ethernet]
+mtu=8500
+
+[bond]
+miimon=100
+mode=active-backup
+
+[ipv4]
+address1=71.1.1.105/23,71.1.0.1
+dns=70.1.1.82;
+dns-search=srib-lab-ocp.lan;
+method=manual
+
+[ipv6]
+address1=2405:100:200:71::1:553/64,2405:100:200:71::1
+dns=2405:100:200:70::1:1769;
+dns-search=srib-lab-ocp.lan;
+method=manual
+m3-bond0.nmconnection Collapse source
+
+
+[connection]
+id=bond0
+autoconnect-priority=-100
+autoconnect-retries=1
+type=bond
+interface-name=bond0
+multi-connect=1
+
+[ethernet]
+mtu=8500
+
+[bond]
+miimon=100
+mode=active-backup
+
+[ipv4]
+address1=71.1.1.109/23,71.1.0.1
+dns=70.1.1.82;
+dns-search=srib-lab-ocp.lan;
+method=manual
+
+[ipv6]
+address1=2405:100:200:71::1:554/64,2405:100:200:71::1
+dns=2405:100:200:70::1:1769;
+dns-search=srib-lab-ocp.lan;
+method=manual
+m-bond0-port1.nmconnection Collapse source
+
+
+[connection]
+id=ens1f0
+autoconnect-priority=-100
+autoconnect-retries=1
+type=ethernet
+interface-name=ens1f0
+master=bond0
+multi-connect=1
+slave-type=bond
+m-bond0-port2.nmconnection Collapse source
+
+
+[connection]
+id=ens4f0
+autoconnect-priority=-100
+autoconnect-retries=1
+type=ethernet
+interface-name=ens4f0
+master=bond0
+multi-connect=1
+slave-type=bond
+
+
+
+
+srib@ocp-haproxy-4:~/ocp-iso$ ./coreos-installer iso customize --dest-device /dev/sda --dest-ignition ../ocp-install/bootstrap.ign --network-keyfile boot-enp0s3.nmconnection -o b.iso org-live.x86_64.iso
+Boot media will automatically install to /dev/sda without confirmation.
+srib@ocp-haproxy-4:~/ocp-iso$
+
+
+srib@ocp-haproxy-4:~/ocp-iso$ ./coreos-installer iso customize --dest-device /dev/sda --dest-ignition ../ocp-install/master.ign --network-keyfile m1-bond0.nmconnection --network-keyfile m-bond0-port1.nmconnection --network-keyfile m-bond0-port2.nmconnection -o m1.iso org-live.x86_64.iso
+Boot media will automatically install to /dev/sda without confirmation.
+srib@ocp-haproxy-4:~/ocp-iso$
+
+srib@ocp-haproxy-4:~/ocp-iso$ ./coreos-installer iso customize --dest-device /dev/sda --dest-ignition ../ocp-install/master.ign --network-keyfile m2-bond0.nmconnection --network-keyfile m-bond0-port1.nmconnection --network-keyfile m-bond0-port2.nmconnection -o m2.iso org-live.x86_64.iso
+Boot media will automatically install to /dev/sda without confirmation.
+srib@ocp-haproxy-4:~/ocp-iso$
+
+srib@ocp-haproxy-4:~/ocp-iso$ ./coreos-installer iso customize --dest-device /dev/sda --dest-ignition ../ocp-install/master.ign --network-keyfile m3-bond0.nmconnection --network-keyfile m-bond0-port1.nmconnection --network-keyfile m-bond0-port2.nmconnection -o m3.iso org-live.x86_64.iso
+Boot media will automatically install to /dev/sda without confirmation.
+srib@ocp-haproxy-4:~/ocp-iso$
+
+
+3.2.  add direct interface names in the .nmconnection files
+* to check ACTIVE interfaces in the nodes, the raw RHCOS ISO can be loaded in the nodes and checked through nmtui-edit/nmcli command*
+
+
+
+IMPORTANT
+
+there are two lab gateways → 70.1.1.1 and 71.1.0.1. Please select the appropriate gateway for you cluster based on the IP address of you master nodes and the SUBNET (71... IP would be able to connect to 71.1.0.1 directly and 70... IP should be able to connect to 70.1.1.1 IP directly, based on subnets)
+
+check the MIRROR/HAPROXY SERVER IP. In the below given example, the master node IP is 71.. and mirror IP is 70.1.1.82. So routes are needed to reach it.
+
+
+
+
+
+boot-enp0s3.nmconnection Collapse source
+
+
+[connection]
+id=enp0s8
+autoconnect-priority=-100
+autoconnect-retries=1
+type=ethernet
+multi-connect=1
+interface-name=enp0s8
+
+[ethernet]
+mtu=8500
+
+[ipv4]
+address1=70.1.1.124/23,70.1.1.1
+dns=70.1.1.82;
+dns-search=srib-lab-ocp.lan;
+method=manual
+
+[ipv6]
+address1=2405:100:200:70::1:557/64,2405:100:200:70::1
+dns=2405:100:200:70::1:1769;
+dns-search=srib-lab-ocp.lan;
+method=manual
+
+[route]
+routes=71.1.0.0/23 via 70.1.1.1
+
+[route6]
+routes=2405:100:200:71::/64 via 2405:100:200:70::1
+
+
+m1-ens3f3.nmconnection Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-isoMNO$ cat m1-ens1f0.nmconnection
+[connection]
+id=ens1f0
+autoconnect-priority=-100
+autoconnect-retries=1
+type=ethernet
+multi-connect=1
+interface-name=ens1f0
+
+[ethernet]
+mtu=8500
+
+[ipv4]
+address1=71.1.1.5/23,71.1.0.1
+dns=70.1.1.82;
+dns-search=srib-lab-ocp.lan;
+method=manual
+
+[ipv6]
+address1=2405:100:200:71::1:552/64,2405:100:200:71::1
+dns=2405:100:200:70::1:1769;
+dns-search=srib-lab-ocp.lan;
+method=manual
+
+[route]
+routes=70.1.0.0/23 via 71.1.0.1
+
+[route6]
+routes=2405:100:200:70::/64 via 2405:100:200:71::1
+
+
+m2-ens3f3.nmconnection Collapse source
+
+
+[connection]
+id=ens1f0
+autoconnect-priority=-100
+autoconnect-retries=1
+type=ethernet
+multi-connect=1
+interface-name=ens1f0
+
+[ethernet]
+mtu=8500
+
+[ipv4]
+address1=71.1.1.105/23,71.1.0.1
+dns=70.1.1.82;
+dns-search=srib-lab-ocp.lan;
+method=manual
+
+[ipv6]
+address1=2405:100:200:71::1:553/64,2405:100:200:71::1
+dns=2405:100:200:70::1:1769;
+dns-search=srib-lab-ocp.lan;
+method=manual
+
+[route]
+routes=70.1.0.0/23 via 71.1.0.1
+
+[route6]
+routes=2405:100:200:70::/64 via 2405:100:200:71::1
+
+
+m3-ens3f3.nmconnection Collapse source
+
+
+[connection]
+id=ens1f0
+autoconnect-priority=-100
+autoconnect-retries=1
+type=ethernet
+multi-connect=1
+interface-name=ens1f0
+
+[ethernet]
+mtu=8500
+
+[ipv4]
+address1=71.1.1.109/23,71.1.0.1
+dns=70.1.1.82;
+dns-search=srib-lab-ocp.lan;
+method=manual
+
+[ipv6]
+address1=2405:100:200:71::1:554/64,2405:100:200:71::1
+dns=2405:100:200:70::1:1769;
+dns-search=srib-lab-ocp.lan;
+method=manual
+
+[route]
+routes=70.1.0.0/23 via 71.1.0.1
+
+[route6]
+routes=2405:100:200:70::/64 via 2405:100:200:71::1
+
+
+---------------------------------------------------------------- Boostrap --------------------------------------------------------------------------------
+srib@ocp-haproxy-4:~/ocp-isoMNO$ ./coreos-installer iso customize --dest-device /dev/sda --dest-ignition /home/srib/ocp-installMNO/ocp-install/bootstrap.ign --network-keyfile boot-enp0s8.nmconnection -o bootstrap.iso rhcos-418.94.202508060022-0-live.x86_64.iso
+Boot media will automatically install to /dev/sda without confirmation.
+---------------------------------------------------------------- MASTER1 --------------------------------------------------------------------------------
+srib@ocp-haproxy-4:~/ocp-isoMNO$ ./coreos-installer iso customize --dest-device /dev/sda --dest-ignition /home/srib/ocp-installMNO/ocp-install/master.ign --network-keyfile  m1-ens1f0.nmconnection  -o master1.iso rhcos-418.94.202508060022-0-live.x86_64.iso
+Boot media will automatically install to /dev/sda without confirmation.
+---------------------------------------------------------------- MASTER2 --------------------------------------------------------------------------------
+srib@ocp-haproxy-4:~/ocp-isoMNO$ ./coreos-installer iso customize --dest-device /dev/sda --dest-ignition /home/srib/ocp-installMNO/ocp-install/master.ign --network-keyfile  m2-ens1f0.nmconnection  -o master2.iso rhcos-418.94.202508060022-0-live.x86_64.iso
+Boot media will automatically install to /dev/sda without confirmation.
+---------------------------------------------------------------- MASTER3 --------------------------------------------------------------------------------
+srib@ocp-haproxy-4:~/ocp-isoMNO$ ./coreos-installer iso customize --dest-device /dev/sda --dest-ignition /home/srib/ocp-installMNO/ocp-install/master.ign --network-keyfile  m3-ens1f0.nmconnection  -o master3.iso rhcos-418.94.202508060022-0-live.x86_64.iso
+Boot media will automatically install to /dev/sda without confirmation.
+srib@ocp-haproxy-4:~/ocp-isoMNO$ ls -lart
+total 5846728
+-rw-rw-r--  1 srib srib 1331691520 Aug  6 02:40 rhcos-418.94.202508060022-0-live.x86_64.iso
+-rw-rw-r--  1 srib srib        483 Jan  7 07:37 boot-enp0s8.nmconnection
+-rwxrwxrwx  1 srib srib   12210104 Jan  7 07:43 coreos-installer
+-rw-rw-r--  1 srib srib        479 Jan  7 07:43 m1-ens1f0.nmconnection
+-rw-rw-r--  1 srib srib        481 Jan  7 07:45 m2-ens1f0.nmconnection
+-rw-rw-r--  1 srib srib        481 Jan  7 07:46 m3-ens1f0.nmconnection
+drwxr-x--- 59 srib srib      12288 Jan  9 12:07 ..
+-rw-------  1 srib srib 1160773632 Jan  9 13:14 bootstrap.iso
+-rw-------  1 srib srib 1160773632 Jan  9 13:15 master1.iso
+-rw-------  1 srib srib 1160773632 Jan  9 13:15 master3.iso
+-rw-------  1 srib srib 1160773632 Jan  9 13:15 master2.iso
