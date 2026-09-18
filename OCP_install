@@ -1,0 +1,973 @@
+1. One time configuration of Mirror-Registry, DNS, http server Refer Steps here. Skip if already done once. 
+
+
+2. Create New VM (Ex VM4) with Ubuntu or RHEL OS with Internet and configure HA Proxy: 
+Install haproxy Collapse source
+
+
+srib@ocp-haproxy-4:~$ sudo apt install -y haproxy
+[sudo] password for srib:
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+Suggested packages:
+  vim-haproxy haproxy-doc
+The following NEW packages will be installed:
+  haproxy
+0 upgraded, 1 newly installed, 0 to remove and 38 not upgraded.
+Need to get 2,037 kB of archives.
+After this operation, 4,631 kB of additional disk space will be used.
+Get:1 http://archive.ubuntu.com/ubuntu noble/main amd64 haproxy amd64 2.8.5-1ubuntu3 [2,037 kB]
+Fetched 2,037 kB in 3s (714 kB/s)
+Selecting previously unselected package haproxy.
+(Reading database ... 190872 files and directories currently installed.)
+Preparing to unpack .../haproxy_2.8.5-1ubuntu3_amd64.deb ...
+Unpacking haproxy (2.8.5-1ubuntu3) ...
+Setting up haproxy (2.8.5-1ubuntu3) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/haproxy.service → /usr/lib/systemd/system/haproxy.service.
+Processing triggers for rsyslog (8.2312.0-3ubuntu9) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+srib@ocp-haproxy-4:~$
+/etc/haproxy/haproxy.cfg Collapse source
+
+
+# Global settings
+#---------------------------------------------------------------------
+global
+    maxconn     20000
+    log         /dev/log local0 info
+    chroot      /var/lib/haproxy
+    pidfile     /var/run/haproxy.pid
+    user        haproxy
+    group       haproxy
+    daemon
+    # turn on stats unix socket
+    stats socket /var/lib/haproxy/stats
+#---------------------------------------------------------------------
+# common defaults that all the 'listen' and 'backend' sections will
+# use if not designated in their block
+#---------------------------------------------------------------------
+defaults
+    log                     global
+    mode                    http
+    option                  httplog
+    option                  dontlognull
+    option http-server-close
+    option redispatch
+    option forwardfor       except 127.0.0.0/8
+    retries                 3
+    maxconn                 20000
+    timeout http-request    10000ms
+    timeout http-keep-alive 10000ms
+    timeout check           10000ms
+    timeout connect         40000ms
+    timeout client          300000ms
+    timeout server          300000ms
+    timeout queue           50000ms
+# Enable HAProxy stats
+listen stats
+    bind :9000
+    stats uri /stats
+    stats refresh 10000ms
+# Kube API Server
+frontend k8s_api_frontend
+    bind :6443
+    default_backend k8s_api_backend
+    mode tcp
+backend k8s_api_backend
+    mode tcp
+    balance source
+    server      ocp-bootstrap 70.1.1.124:6443 check
+    server      master1 71.1.1.5:6443 check
+    server      master2 71.1.1.105:6443 check
+    server      master3 71.1.1.109:6443 check
+# OCP Machine Config Server
+frontend ocp_machine_config_server_frontend
+    mode tcp
+    bind :22623
+    default_backend ocp_machine_config_server_backend
+backend ocp_machine_config_server_backend
+    mode tcp
+    balance source
+    server      ocp-bootstrap 70.1.1.124:22623 check
+    server      master1 71.1.1.5:22623 check
+    server      master2 71.1.1.105:22623 check
+    server      master3 71.1.1.109:22623 check
+# OCP Ingress - layer 4 tcp mode for each. Ingress Controller will handle layer 7.
+frontend ocp_http_ingress_frontend
+    bind :80
+    default_backend ocp_http_ingress_backend
+    mode tcp
+backend ocp_http_ingress_backend
+    balance source
+    mode tcp
+    server master1 71.1.1.5:80 check
+    server master2 71.1.1.105:80 check
+    server master3 71.1.1.109:80 check
+frontend ocp_https_ingress_frontend
+    bind *:443
+    default_backend ocp_https_ingress_backend
+    mode tcp
+backend ocp_https_ingress_backend
+    mode tcp
+    balance source
+    server master1 71.1.1.5:443 check
+    server master2 71.1.1.105:443 check
+    server master3 71.1.1.109:443 check
+Enable and Start HaProxy Expand source
+
+
+3. Create Install dir and boot manifest images using install-config.yaml :
+
+3.1. Create ssh public key if not already present
+
+ssh-keygen Collapse source
+
+
+srib@ocp-haproxy-4:~$ ssh-keygen
+Generating public/private ed25519 key pair.
+Enter file in which to save the key (/home/srib/.ssh/id_ed25519):
+Enter passphrase (empty for no passphrase):
+Enter same passphrase again:
+Your identification has been saved in /home/srib/.ssh/id_ed25519
+Your public key has been saved in /home/srib/.ssh/id_ed25519.pub
+The key fingerprint is:
+SHA256:F+Fmm59og7S283pBf8/of3OwfiTh45ZF+W7Zwnz3CNs srib@ocp-haproxy-4.lab4.srib-lab-ocp.lan
+The key's randomart image is:
++--[ED25519 256]--+
+|          .      |
+|         . .     |
+|          =     .|
+|         o.+  ...|
+|        S.+. . o.|
+|       . +.o..* +|
+|        + +.+= &o|
+|       ..o.. +X+%|
+|        o=. .+E*O|
++----[SHA256]-----+
+srib@ocp-haproxy-4:~$
+3.2. Create new install dir and  install-config.yaml
+
+
+srib@oc-haproxy-4:~$ mkdir ocp-install
+srib@oc-haproxy-4:~$ cd ocp-install
+srib@ocp-haproxy-4:~/ocp-install$ touch install-config.yaml 
+3.3. Get pull secret content without newline to be used in install-config.yaml
+3.4. Get root ca cert from mirror2 registry server ([root@mirror2 ~]# cat mirror-cert/rootCA.pem) to be used in install-config.yaml
+
+Important
+
+Workload partitioning
+
+In resource-constrained environments, you can use workload partitioning to isolate OpenShift Container Platform services, cluster management workloads, and infrastructure pods to run on a reserved set of CPUs.
+
+Important Note
+
+Workload partitioning can only be enabled during cluster installation. You cannot enable/disable workload partitioning postinstallation. Otherwise you have to reinstall the cluster again.
+
+
+
+install-config.yaml
+
+
+apiVersion: v1
+baseDomain: srib-lab-ocp.lan    #Main Domain in DNS Server
+cpuPartitioningMode: AllNodes   #To run ocp pods on a reserved set of CPUs (MUST configuration)
+imageContentSources:
+- mirrors:
+  - mirror2.srib-lab-ocp.lan:8443/ocp4/openshift4
+  source: quay.io/openshift-release-dev/ocp-release
+- mirrors:
+  - mirror2.srib-lab-ocp.lan:8443/ocp4/openshift4
+  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+compute:
+  - hyperthreading: Enabled
+    name: worker
+    replicas: 0 # Must be set to 0 for User Provisioned Installation as worker nodes will be manually deployed.
+controlPlane:
+  hyperthreading: Enabled
+  name: master
+  replicas: 3
+metadata:
+  name: lab4 # Cluster name
+networking:
+  clusterNetwork:
+    - cidr: 10.124.0.0/14
+      hostPrefix: 23
+    - cidr: fd03::/48
+      hostPrefix: 64
+  networkType: OVNKubernetes
+  serviceNetwork:
+    - 172.31.0.0/16
+    - fd04::/112
+  machineNetwork:
+    - cidr: 70.0.0.0/7
+    - cidr: 2405:100:200::/40
+platform:
+  none: {}
+fips: false
+pullSecret: '...'  #Pull Secret content in same line Step 3.3
+sshKey: '...'  #SSH Pub key from Step 3.1 cat /home/srib/.ssh/id_ed25519.pub
+additionalTrustBundle: |          #Cert from Step 3.4
+  -----BEGIN CERTIFICATE-----
+  ...
+  -----END CERTIFICATE-----
+3.5. Get openshift-install binary from mirror 2 registry after command oc adm release extract -a ${LOCAL_SECRET_JSON} --command=openshift-install "${LOCAL_REGISTRY}/${LOCAL_REPOSITORY}:${OCP_RELEASE}-${ARCHITECTURE}" is executed.
+
+
+
+
+[root@mirror2 openshift-install-4-14-38]# scp openshift-install srib@70.1.1.129:/home/srib/
+srib@70.1.1.129's password:
+openshift-install                                                                                                                                                           100%  631MB   1.8MB/s   05:49
+[root@mirror2 openshift-install-4-14-38]#
+srib@ocp-haproxy-4:~$ ./openshift-install version
+./openshift-install 4.14.38
+built from commit a8c141497478741629645e70b1dc7019992d4778
+release image mirror2.srib-lab-ocp.lan:8443/ocp4/openshift4@sha256:98e43d1e848f0ad303ed4d8d427e92f7aaeaf2f670a3bfcdbeeeaa591b63fefd
+release architecture amd64
+srib@ocp-haproxy-4:~$
+3.6. Create manifest files
+
+
+
+
+srib@ocp-haproxy-4:~$ ./openshift-install create manifests --dir ./ocp-install
+WARNING imageContentSources is deprecated, please use ImageDigestSources
+INFO Consuming Install Config from target directory
+WARNING Making control-plane schedulable by setting MastersSchedulable to true for Scheduler cluster settings
+INFO Manifests created in: ocp-install/manifests and ocp-install/openshift
+srib@ocp-haproxy-4:~$
+3.7. Create new Network Config file with MTU 8400 in manifest folder
+
+
+
+
+srib@ocp-haproxy-4:~$ cd ocp-install/manifests
+srib@ocp-haproxy-4:~/ocp-install/manifests$ ls -lrt
+total 68
+-rw-r----- 1 srib srib  522 Dec  3 11:55 cluster-infrastructure-02-config.yml
+-rw-r----- 1 srib srib  189 Dec  3 11:55 cluster-dns-02-config.yml
+-rw-r----- 1 srib srib 3199 Dec  3 11:55 cluster-config.yaml
+-rw-r----- 1 srib srib 1620 Dec  3 11:55 user-ca-bundle-config.yaml
+-rw-r----- 1 srib srib 3805 Dec  3 11:55 openshift-config-secret-pull-secret.yaml
+-rw-r----- 1 srib srib 4042 Dec  3 11:55 machine-config-server-tls-secret.yaml
+-rw-r----- 1 srib srib 1304 Dec  3 11:55 kube-system-configmap-root-ca.yaml
+-rw-r----- 1 srib srib  118 Dec  3 11:55 kube-cloud-config.yaml
+-rw-r----- 1 srib srib  407 Dec  3 11:55 image-content-source-policy.yaml
+-rw-r----- 1 srib srib  200 Dec  3 11:55 cvo-overrides.yaml
+-rw-r----- 1 srib srib  170 Dec  3 11:55 cluster-scheduler-02-config.yml
+-rw-r----- 1 srib srib  142 Dec  3 11:55 cluster-proxy-01-config.yaml
+-rw-r----- 1 srib srib  327 Dec  3 11:55 cluster-network-02-config.yml
+-rw-r----- 1 srib srib 9607 Dec  3 11:55 cluster-network-01-crd.yml
+-rw-r----- 1 srib srib  225 Dec  3 11:55 cluster-ingress-02-config.yml
+srib@ocp-haproxy-4:~/ocp-install/manifests$
+srib@ocp-haproxy-4:~/ocp-install/manifests$ cat cluster-network-03-config.yml
+apiVersion: operator.openshift.io/v1
+kind: Network
+metadata:
+  name: cluster
+spec:
+  defaultNetwork:
+  type: OVNKubernetes
+  ovnKubernetesConfig:
+    mtu: 8400
+srib@ocp-haproxy-4:~/ocp-install/manifests$
+
+
+3.8. To Set core user password for master nodes
+
+
+
+
+srib@ocp-haproxy-4:~/ocp-install/manifests$ COREPASSWORDHASH=$(printf "srib@123" | openssl passwd -6 --stdin)
+srib@ocp-haproxy-4:~/ocp-install/manifests$ echo $COREPASSWORDHASH
+$6$n2hKo9z1xSRMDvOt$xkgEry1JxqrxaHeBLWI.isedTxjQNaMNnf6GJlHsXKbV4lY1qcoZO7ZAqLBfTlbfwUO26wjioJ1Hc.J0/lO3z0
+srib@ocp-haproxy-4:~/ocp-install/manifests$
+srib@ocp-haproxy-4:~/ocp-install/manifests$ cat machine-config-99-set-core-master-password.yaml
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 99-set-core-master-password
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    passwd:
+      users:
+      - name: core
+        passwordHash: $6$n2hKo9z1xSRMDvOt$xkgEry1JxqrxaHeBLWI.isedTxjQNaMNnf6GJlHsXKbV4lY1qcoZO7ZAqLBfTlbfwUO26wjioJ1Hc.J0/lO3z0
+srib@ocp-haproxy-4:~/ocp-install/manifests$
+3.9. To Set SCTP Modules in Master nodes
+
+
+
+
+srib@ocp-haproxy-4:~/ocp-install/manifests$ cat machine-config-99-sctp-module.yaml
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  name: 99-load-sctp-module-master
+  labels:
+    machineconfiguration.openshift.io/role: master
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    storage:
+      files:
+        - path: /etc/modprobe.d/sctp-blacklist.conf
+          mode: 0644
+          overwrite: true
+          contents:
+            source: data:,
+        - path: /etc/modules-load.d/sctp-load.conf
+          mode: 0644
+          overwrite: true
+          contents:
+            source: data:,sctp
+srib@ocp-haproxy-4:~/ocp-install/manifests$
+3.10. Create ignition files
+
+
+
+
+srib@ocp-haproxy-4:~/ocp-install/manifests$ ls -lrt
+total 80
+-rw-r----- 1 srib srib  522 Dec  3 11:55 cluster-infrastructure-02-config.yml
+-rw-r----- 1 srib srib  189 Dec  3 11:55 cluster-dns-02-config.yml
+-rw-r----- 1 srib srib 3199 Dec  3 11:55 cluster-config.yaml
+-rw-r----- 1 srib srib 1620 Dec  3 11:55 user-ca-bundle-config.yaml
+-rw-r----- 1 srib srib 3805 Dec  3 11:55 openshift-config-secret-pull-secret.yaml
+-rw-r----- 1 srib srib 4042 Dec  3 11:55 machine-config-server-tls-secret.yaml
+-rw-r----- 1 srib srib 1304 Dec  3 11:55 kube-system-configmap-root-ca.yaml
+-rw-r----- 1 srib srib  118 Dec  3 11:55 kube-cloud-config.yaml
+-rw-r----- 1 srib srib  407 Dec  3 11:55 image-content-source-policy.yaml
+-rw-r----- 1 srib srib  200 Dec  3 11:55 cvo-overrides.yaml
+-rw-r----- 1 srib srib  170 Dec  3 11:55 cluster-scheduler-02-config.yml
+-rw-r----- 1 srib srib  142 Dec  3 11:55 cluster-proxy-01-config.yaml
+-rw-r----- 1 srib srib  327 Dec  3 11:55 cluster-network-02-config.yml
+-rw-r----- 1 srib srib 9607 Dec  3 11:55 cluster-network-01-crd.yml
+-rw-r----- 1 srib srib  225 Dec  3 11:55 cluster-ingress-02-config.yml
+-rw-rw-r-- 1 srib srib  160 Dec  3 11:56 cluster-network-03-config.yml
+-rw-rw-r-- 1 srib srib  400 Dec  3 12:14 machine-config-99-set-core-master-password.yaml
+-rw-rw-r-- 1 srib srib  547 Dec  3 12:22 machine-config-99-sctp-module.yaml
+srib@ocp-haproxy-4:~/ocp-install/manifests$
+srib@ocp-haproxy-4:~/ocp-install/manifests$ cd ../..
+srib@ocp-haproxy-4:~$
+srib@ocp-haproxy-4:~$ ./openshift-install create ignition-configs --dir ./ocp-install
+INFO Consuming Openshift Manifests from target directory
+INFO Consuming Common Manifests from target directory
+INFO Consuming OpenShift Install (Manifests) from target directory
+INFO Consuming Master Machines from target directory
+INFO Consuming Worker Machines from target directory
+INFO Ignition-Configs created in: ocp-install and ocp-install/auth
+srib@ocp-haproxy-4:~$
+3.11. Copy created files to http server cluster folder and change permissions (lab4)
+
+
+
+[root@bastion ~]# mkdir /var/www/html/lab4
+[root@bastion ~]#
+[root@bastion ~]# cd /var/www/html/lab4
+[root@bastion lab4]#
+[root@bastion lab4]# scp srib@70.1.1.129:/home/srib/ocp-install/*.* .
+srib@70.1.1.129's password:
+bootstrap.ign                                                                                                                                                                                                                                               100%  284KB 147.0KB/s   00:01
+master.ign                                                                                                                                                                                                                                                  100% 1723     6.9MB/s   00:00
+metadata.json                                                                                                                                                                                                                                               100%   96   459.1KB/s   00:00
+worker.ign                                                                                                                                                                                                                                                  100% 1723     8.1MB/s   00:00
+[root@bastion lab4]#
+[root@bastion lab4]#
+[root@bastion lab4]# chcon -R -t httpd_sys_content_t /var/www/html/lab4/
+[root@bastion lab4]# chown -R apache: /var/www/html/lab4/
+[root@bastion lab4]# chmod 755 /var/www/html/lab4/
+[root@bastion lab4]#
+[root@bastion lab4]# ls -lrt
+total 300
+-rw-r-----. 1 apache apache 290957 Jun 20 04:31 bootstrap.ign
+-rw-r-----. 1 apache apache   1723 Jun 20 04:31 master.ign
+-rw-r-----. 1 apache apache   1723 Jun 20 04:31 worker.ign
+-rw-r-----. 1 apache apache     96 Jun 20 04:31 metadata.json
+[root@bastion lab4]#
+4.  Follow the link on 4.1 for creating ISOs per node and load directly into servers without any commands on server console or follow step 5.
+4.1.  Create Per node ISO and load.
+5. Boot Cluster Nodes with RHCOS and Join OCP cluster
+5.1. Download rhcos live iso 
+
+
+srib@ocp-haproxy-4:~$ ARCH=x86_64
+srib@ocp-haproxy-4:~$ ISO_URL=$(./openshift-install coreos print-stream-json | grep location | grep $ARCH | grep iso | cut -d\" -f4)
+srib@ocp-haproxy-4:~$ echo $ISO_URL
+https://rhcos.mirror.openshift.com/art/storage/prod/streams/4.14-9.2/builds/414.92.202407091253-0/x86_64/rhcos-414.92.202407091253-0-live.x86_64.iso
+srib@ocp-haproxy-4:~$
+5.2. Create bootstrap VM and load iso from Step 4.1
+5.3. Configure Network using nmtui-edit or cli ip commands, Reference commands below:
+
+Important
+
+Interface MTU to be set as 8500
+
+
+
+
+
+sudo nmcli connection modify enp0s3 ipv4.addresses '70.1.1.124/23' ipv4.gateway '70.1.1.1' ipv4.dns '70.1.1.82' ipv4.dns-search 'srib-lab-ocp.lan' ipv4.method manual
+sudo nmcli connection modify enp0s3 +ipv4.routes "71.1.0.0/23 70.1.1.1"
+sudo nmcli connection modify enp0s3 ipv6.addresses '2405:100:200:70::1:557/64' ipv6.gateway '2405:100:200:70::1' ipv6.dns '2405:100:200:70::1:1769' ipv6.dns-search 'srib-lab-ocp.lan' ipv6.method manual
+sudo nmcli connection modify enp0s3 +ipv6.routes "2405:100:200:71::/64 2405:100:200:70::1"
+sudo nmcli connection modify enp0s3 802-3-ethernet.mtu 8500
+sudo systemctl restart NetworkManager
+sudo nmcli connection up enp0s3
+ping -c 3 70.1.1.82
+ping -c 3 71.1.0.1
+ping6 -c 3 2405:100:200:70::1:1769
+ping6 -c 3 2405:100:200:71::1
+ip -4 addr
+ip -6 addr
+lsblk
+
+
+5.4. Start Bootstrap node install process, wait for install to complete 
+
+
+sudo coreos-installer install /dev/sda --ignition-url=http://70.1.1.82:8080/lab4/bootstrap.ign --insecure --insecure-ignition --copy-network
+
+
+5.5. Boot all the 3 Nodes (Masters) from ilo console with RHCOS (Step 4.1) and bring IP connectivity with bonding, Refer Steps
+
+Important
+
+Interface MTU to be set as 8500
+
+5.5.1. IP Configuration and check Reference Commands:
+
+
+
+
+sudo nmcli connection add type bond con-name bond0 ifname bond0 bond.options "mode=active-backup,miimon=100"
+sudo nmcli connection add type ethernet slave-type bond con-name bond0-port1 ifname ens1f0 master bond0
+sudo nmcli connection add type ethernet slave-type bond con-name bond0-port2 ifname ens4f0 master bond0
+# Master 1 IP
+sudo nmcli connection modify bond0 ipv4.addresses '71.1.1.5/23' ipv4.gateway '71.1.0.1' ipv4.dns '70.1.1.82' ipv4.dns-search 'srib-lab-ocp.lan' ipv4.method manual
+sudo nmcli connection modify bond0 ipv6.addresses '2405:100:200:71::1:552/64' ipv6.gateway '2405:100:200:71::1' ipv6.dns '2405:100:200:70::1:1769' ipv6.dns-search 'srib-lab-ocp.lan' ipv6.method manual
+# Or Master 2 IP
+sudo nmcli connection modify bond0 ipv4.addresses '71.1.1.105/23' ipv4.gateway '71.1.0.1' ipv4.dns '70.1.1.82' ipv4.dns-search 'srib-lab-ocp.lan' ipv4.method manual
+sudo nmcli connection modify bond0 ipv6.addresses '2405:100:200:71::1:553/64' ipv6.gateway '2405:100:200:71::1' ipv6.dns '2405:100:200:70::1:1769' ipv6.dns-search 'srib-lab-ocp.lan' ipv6.method manual
+# Or Master 3 IP
+sudo nmcli connection modify bond0 ipv4.addresses '71.1.1.109/23' ipv4.gateway '71.1.0.1' ipv4.dns '70.1.1.82' ipv4.dns-search 'srib-lab-ocp.lan' ipv4.method manual
+sudo nmcli connection modify bond0 ipv6.addresses '2405:100:200:71::1:554/64' ipv6.gateway '2405:100:200:71::1' ipv6.dns '2405:100:200:70::1:1769' ipv6.dns-search 'srib-lab-ocp.lan' ipv6.method manual
+sudo nmcli connection modify ens3f2 ipv4.method disabled
+sudo nmcli connection modify ens3f2 ipv6.method disabled
+sudo nmcli connection modify eno8403np1 ipv4.method disabled
+sudo nmcli connection modify eno8403np1 ipv6.method disabled
+sudo nmcli connection modify bond0 802-3-ethernet.mtu 8500
+sudo systemctl restart NetworkManager
+sudo nmcli connection up bond0-port1
+sudo nmcli connection up bond0-port2
+sudo nmcli connection up bond0
+cat /proc/net/bonding/bond0
+ping -c 3 70.1.1.82
+ping6 -c 3 2405:100:200:70::1:1769
+ip -4 addr
+ip -6 addr
+lsblk
+
+
+5.5.2. Start Ignition install Process in nodes, Wait for installation to complete
+5.5.2.1. Command for Master
+ 
+
+
+sudo coreos-installer install /dev/sda --ignition-url=http://70.1.1.82:8080/lab4/master.ign --insecure --insecure-ignition --copy-network
+5.5.3. Repeat Steps 4.5.1 to 4.5.2 for all nodes (Masters) with corresponding IP addresses
+5.5.4. Wait for Install complete in all 4 Nodes (Bootstrap + 3 master)
+5.6. Restart all 4 nodes (Bootstrap + 3 master) from disk
+Note
+
+Reboot all 4 nodes (bootstrap and 3 cluster nodes) at same time otherwise the master nodes may not get added to the cluster properly
+
+5.7. Once bootstrap node is UP, ssh into the bootstrap node and monitor for log indicating completion of bootstrap process
+
+
+srib@ocp-haproxy-4:~$ ssh -l core ocp-bootstrap.lab4.srib-lab-ocp.lan
+The authenticity of host 'ocp-bootstrap.lab4.srib-lab-ocp.lan (70.1.1.124)' can't be established.
+ED25519 key fingerprint is SHA256:Xx1aSEBa7PmvbVz476ot1oBlIO4sXE/VoxMIPCT4Ylk.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added 'ocp-bootstrap.lab4.srib-lab-ocp.lan' (ED25519) to the list of known hosts.
+Red Hat Enterprise Linux CoreOS 414.92.202402130420-0
+  Part of OpenShift 4.14, RHCOS is a Kubernetes native operating system
+  managed by the Machine Config Operator (`clusteroperator/machine-config`).
+WARNING: Direct SSH access to machines is not recommended; instead,
+make configuration changes via `machineconfig` objects:
+  https://docs.openshift.com/container-platform/4.14/architecture/architecture-rhcos.html
+---
+This is the bootstrap node; it will be destroyed when the master is fully up.
+The primary services are release-image.service followed by bootkube.service. To watch their status, run e.g.
+  journalctl -b -f -u release-image.service -u bootkube.service
+[core@ocp-bootstrap ~]$
+[core@ocp-bootstrap ~]$
+[core@ocp-bootstrap ~]$ journalctl -b -f -u release-image.service -u bootkube.service
+Check if bootstrap completed in bootstrap node Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-iso$ ssh -l core ocp-bootstrap.lab4.srib-lab-ocp.lan -- journalctl -b -f -u release-image.service -u bootkube.service
+Dec 03 14:23:45 localhost.localdomain systemd[1]: Starting Download the OpenShift Release Image...
+Dec 03 14:23:45 localhost.localdomain release-image-download.sh[2152]: Pulling mirror2.srib-lab-ocp.lan:8443/ocp4/openshift4@sha256:98e43d1e848f0ad303ed4d8d427e92f7aaeaf2f670a3bfcdbeeeaa591b63fefd...
+Dec 03 14:28:14 ocp-bootstrap.lab4.srib-lab-ocp.lan release-image-download.sh[2207]: b6be1d3a3a3a9601f8c8d5aff03ffde927234ca53c38d7ed37a302b21c5fb986
+Dec 03 14:28:14 ocp-bootstrap.lab4.srib-lab-ocp.lan systemd[1]: Finished Download the OpenShift Release Image.
+Dec 03 14:28:15 ocp-bootstrap.lab4.srib-lab-ocp.lan systemd[1]: Started Bootstrap a Kubernetes cluster.
+Dec 03 14:28:19 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[2744]: Moving OpenShift manifests in with the rest of them
+Dec 03 14:28:19 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[4116]: Flag --icsp-file has been deprecated, support for it will be removed in a future release. Use --idms-file instead.
+Dec 03 14:28:20 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[2744]: Rendering cluster config manifests...
+Dec 03 14:30:46 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[4143]: Writing asset: /assets/config-bootstrap/manifests/0000_10_config-operator_01_featuregate.crd.yaml
+De
+Dec 03 14:30:46 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[4143]: Writing asset: /assets/config-bootstrap/manifests/0000_10_config-operator_01_node.crd.yaml
+Dec 03 14:30:46 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[2744]: Rendering Cluster Version Operator Manifests...
+Dec 03 14:30:46 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[2744]: Rendering CEO Manifests...
+...
+De
+Dec 03 15:39:31 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[12403]: I1203 15:39:31.445485       1 waitforceo.go:66] Cluster etcd operator bootstrapped successfully
+Dec 03 15:39:31 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[12403]: I1203 15:39:31.445590       1 waitforceo.go:60] cluster-etcd-operator bootstrap etcd
+Dec 03 15:39:31 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[2744]: Check if API and API-Int URLs are reachable during bootstrap
+Dec 03 15:39:31 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[2744]: Checking if api.lab4.srib-lab-ocp.lan of type API_URL reachable
+Dec 03 15:39:31 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[2744]: Unable to reach API_URL's https endpoint at https://api.lab4.srib-lab-ocp.lan:6443/version
+Dec 03 15:39:31 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[2744]: Unable to validate. https://api.lab4.srib-lab-ocp.lan:6443/version is currently unreachable.
+Dec 03 15:39:31 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[2744]: Checking if api-int.lab4.srib-lab-ocp.lan of type API_INT_URL reachable
+Dec 03 15:39:31 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[2744]: Unable to reach API_INT_URL's https endpoint at https://api-int.lab4.srib-lab-ocp.lan:6443/version
+Dec 03 15:39:31 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[2744]: Unable to validate. https://api-int.lab4.srib-lab-ocp.lan:6443/version is currently unreachable.
+Dec 03 15:39:31 ocp-bootstrap.lab4.srib-lab-ocp.lan bootkube.sh[2744]: bootkube.service complete
+Dec 03 15:39:31 ocp-bootstrap.lab4.srib-lab-ocp.lan systemd[1]: bootkube.service: Deactivated successfully.
+Dec 03 15:39:31 ocp-bootstrap.lab4.srib-lab-ocp.lan systemd[1]: bootkube.service: Consumed 1min 4.012s CPU time.
+Check if bootstrap completed Collapse source
+
+
+srib@ocp-haproxy-4:~$ ./openshift-install --dir ./ocp-install wait-for bootstrap-complete --log-level=debug
+DEBUG OpenShift Installer 4.14.38
+DEBUG Built from commit a8c141497478741629645e70b1dc7019992d4778
+INFO Waiting up to 20m0s (until 4:25PM UTC) for the Kubernetes API at https://api.lab4.srib-lab-ocp.lan:6443...
+DEBUG Loading Agent Config...
+INFO API v1.27.16+03a907c up
+DEBUG Loading Install Config...
+DEBUG   Loading SSH Key...
+DEBUG   Loading Base Domain...
+DEBUG     Loading Platform...
+DEBUG   Loading Cluster Name...
+DEBUG     Loading Base Domain...
+DEBUG     Loading Platform...
+DEBUG   Loading Networking...
+DEBUG     Loading Platform...
+DEBUG   Loading Pull Secret...
+DEBUG   Loading Platform...
+DEBUG Using Install Config loaded from state file
+INFO Waiting up to 30m0s (until 4:35PM UTC) for bootstrapping to complete...
+DEBUG Bootstrap status: complete
+INFO It is now safe to remove the bootstrap resources
+INFO Time elapsed: 0s
+srib@ocp-haproxy-4:~$
+
+
+5.8.  if all nodes are not getting added to cluster (might happen when any of the master nodes was added to the cluster after sometime)
+
+
+srib@ocp-haproxy-1:~$ oc get nodes
+NAME                             STATUS   ROLES                         AGE   VERSION
+ocp-cp-1.lab1.srib-lab-ocp.lan   Ready    control-plane,master,worker   95m   v1.27.16+03a907c
+ocp-cp-2.lab1.srib-lab-ocp.lan   Ready    control-plane,master,worker   98m   v1.27.16+03a907c  # master 3 not added to cluster
+
+#these pending certificates are the issue
+srib@ocp-haproxy-1:~$ oc get csr
+NAME        AGE   SIGNERNAME                                    REQUESTOR                                                                   REQUESTEDDURATION   CONDITION
+csr-67h48   14s   kubernetes.io/kube-apiserver-client-kubelet   system:serviceaccount:openshift-machine-config-operator:node-bootstrapper   <none>              Pending
+csr-g9bzn   19m   kubernetes.io/kube-apiserver-client-kubelet   system:serviceaccount:openshift-machine-config-operator:node-bootstrapper   <none>              Pending
+csr-kzmpr   3s    kubernetes.io/kube-apiserver-client-kubelet   system:serviceaccount:openshift-machine-config-operator:node-bootstrapper   <none>              Pending
+csr-ms4vt   19m   kubernetes.io/kube-apiserver-client-kubelet   system:serviceaccount:openshift-machine-config-operator:node-bootstrapper   <none>              Pending
+srib@ocp-haproxy-1:~$
+srib@ocp-haproxy-1:~$
+srib@ocp-haproxy-1:~$ oc adm certificate approve csr-67h48
+certificatesigningrequest.certificates.k8s.io/csr-67h48 approved
+#approve *ALL PENDING* certificates one by one and the new node should be added to the cluster
+srib@ocp-haproxy-1:~$ oc get nodes
+NAME                             STATUS     ROLES                         AGE    VERSION
+ocp-cp-1.lab1.srib-lab-ocp.lan   Ready      control-plane,master,worker   99m    v1.27.16+03a907c
+ocp-cp-2.lab1.srib-lab-ocp.lan   Ready      control-plane,master,worker   102m   v1.27.16+03a907c
+ocp-cp-3.lab1.srib-lab-ocp.lan   NotReady   control-plane,master,worker   1s     v1.27.16+03a907c
+
+5.9. After bootstrap completion, remove bootstrap node from HA Proxy
+/etc/haproxy/haproxy.cfg Expand source
+Restart HaProxy Expand source
+6. OC command and Monitoring :
+Use proxy node to execute oc commands 
+
+6.1. Set up oc
+
+
+srib@ocp-haproxy-4:~$ sudo apt  install curl
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following NEW packages will be installed:
+  curl
+0 upgraded, 1 newly installed, 0 to remove and 49 not upgraded.
+Need to get 227 kB of archives.
+After this operation, 532 kB of additional disk space will be used.
+Get:1 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 curl amd64 8.5.0-2ubuntu10.1 [227 kB]
+Fetched 227 kB in 1s (252 kB/s)
+Selecting previously unselected package curl.
+(Reading database ... 190964 files and directories currently installed.)
+Preparing to unpack .../curl_8.5.0-2ubuntu10.1_amd64.deb ...
+Unpacking curl (8.5.0-2ubuntu10.1) ...
+Setting up curl (8.5.0-2ubuntu10.1) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+srib@ocp-haproxy-4:~$
+srib@ocp-haproxy-4:~$
+srib@ocp-haproxy-4:~$ OCP_VERSION=latest-4.14
+srib@ocp-haproxy-4:~$ curl -k https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$OCP_VERSION/openshift-client-linux.tar.gz -o oc.tar.gz
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 60.9M  100 60.9M    0     0  8870k      0  0:00:07  0:00:07 --:--:-- 9919k
+srib@ocp-haproxy-4:~$
+srib@ocp-haproxy-4:~$
+srib@ocp-haproxy-4:~$ tar zxf oc.tar.gz
+srib@ocp-haproxy-4:~$ chmod +x oc
+srib@ocp-haproxy-4:~$  sudo cp oc /usr/local/bin/oc
+srib@ocp-haproxy-4:~$ oc version
+Client Version: 4.14.30
+Kustomize Version: v5.0.1
+srib@ocp-haproxy-4:~$
+6.2. Wait for nodes to be ready and check installation complete
+
+
+srib@ocp-haproxy-4:~$ oc get nodes
+NAME                            STATUS   ROLES                         AGE   VERSION
+master1.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   46m   v1.27.16+03a907c
+master2.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   46m   v1.27.16+03a907c
+master3.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   46m   v1.27.16+03a907c
+srib@ocp-haproxy-4:~$
+Check Installation Complete Collapse source
+
+
+srib@ocp-haproxy-4:~$ ./openshift-install --dir ./ocp-install wait-for install-complete --log-level=debug
+DEBUG OpenShift Installer 4.14.38
+DEBUG Built from commit a8c141497478741629645e70b1dc7019992d4778
+DEBUG Loading Install Config...
+DEBUG   Loading SSH Key...
+DEBUG   Loading Base Domain...
+DEBUG     Loading Platform...
+DEBUG   Loading Cluster Name...
+DEBUG     Loading Base Domain...
+DEBUG     Loading Platform...
+DEBUG   Loading Networking...
+DEBUG     Loading Platform...
+DEBUG   Loading Pull Secret...
+DEBUG   Loading Platform...
+DEBUG Using Install Config loaded from state file
+DEBUG Loading Agent Config...
+INFO Waiting up to 40m0s (until 4:52PM UTC) for the cluster at https://api.lab4.srib-lab-ocp.lan:6443 to initialize...
+DEBUG Cluster is initialized
+INFO Checking to see if there is a route at openshift-console/console...
+DEBUG Route found in openshift-console namespace: console
+DEBUG OpenShift console route is admitted
+INFO Install complete!
+INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/home/srib/ocp-install/auth/kubeconfig'
+INFO Access the OpenShift web-console here: https://console-openshift-console.apps.lab4.srib-lab-ocp.lan
+INFO Login to the console with user: "<>", and password: "<>"
+INFO Time elapsed: 0s
+srib@ocp-haproxy-4:~$
+6.3. Check ETCD is working for all 3 masters
+6.3.1. If etcd is UP:
+
+
+srib@ocp-haproxy-4:~$ oc -n openshift-etcd get pods -l k8s-app=etcd -o wide
+NAME                                 READY   STATUS    RESTARTS   AGE     IP           NODE                            NOMINATED NODE   READINESS GATES
+etcd-master1.lab4.srib-lab-ocp.lan   4/4     Running   0          2d12h   71.1.1.5     master1.lab4.srib-lab-ocp.lan   <none>           <none>
+etcd-master2.lab4.srib-lab-ocp.lan   4/4     Running   0          2d12h   71.1.1.105   master2.lab4.srib-lab-ocp.lan   <none>           <none>
+etcd-master3.lab4.srib-lab-ocp.lan   4/4     Running   0          2d12h   71.1.1.109   master3.lab4.srib-lab-ocp.lan   <none>           <none>
+srib@ocp-haproxy-4:~$
+srib@ocp-haproxy-4:~$
+srib@ocp-haproxy-4:~$ oc rsh -n openshift-etcd etcd-master1.lab4.srib-lab-ocp.lan
+sh-5.1# etcdctl member list -w table
++------------------+---------+-------------------------------+-------------------------+-------------------------+------------+
+|        ID        | STATUS  |             NAME              |       PEER ADDRS        |      CLIENT ADDRS       | IS LEARNER |
++------------------+---------+-------------------------------+-------------------------+-------------------------+------------+
+| 57450053e3197eb2 | started | master1.lab4.srib-lab-ocp.lan |   https://71.1.1.5:2380 |   https://71.1.1.5:2379 |      false |
+| 7bc5b463022ba12f | started | master3.lab4.srib-lab-ocp.lan | https://71.1.1.109:2380 | https://71.1.1.109:2379 |      false |
+| f3f673562240b062 | started | master2.lab4.srib-lab-ocp.lan | https://71.1.1.105:2380 | https://71.1.1.105:2379 |      false |
++------------------+---------+-------------------------------+-------------------------+-------------------------+------------+
+sh-5.1# etcdctl endpoint status -w table
++-------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+|        ENDPOINT         |        ID        | VERSION | DB SIZE | IS LEADER | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS |
++-------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+| https://71.1.1.105:2379 | f3f673562240b062 |  3.5.12 |   72 MB |     false |      false |         8 |     170863 |             170863 |        |
+| https://71.1.1.109:2379 | 7bc5b463022ba12f |  3.5.12 |   71 MB |     false |      false |         8 |     170863 |             170863 |        |
+|   https://71.1.1.5:2379 | 57450053e3197eb2 |  3.5.12 |   71 MB |      true |      false |         8 |     170863 |             170863 |        |
++-------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+sh-5.1# exit
+exit
+srib@ocp-haproxy-4:~$
+6.3.2. If etcd is not coming up, check if bootstrap node went into it. Remove it. Refer Steps below:
+
+
+srib@ocp-haproxy-1:~$ oc -n openshift-etcd get pods -l k8s-app=etcd -o wide
+NAME                                  READY   STATUS    RESTARTS      AGE     IP           NODE                             NOMINATED NODE   READINESS GATES
+etcd-ocp-cp-2.lab1.srib-lab-ocp.lan   4/4     Running   0             12m     71.1.1.230   ocp-cp-2.lab1.srib-lab-ocp.lan   <none>           <none>
+etcd-ocp-cp-3.lab1.srib-lab-ocp.lan   3/4     Running   2 (12m ago)   9m22s   71.1.1.227   ocp-cp-3.lab1.srib-lab-ocp.lan   <none>           <none>
+srib@ocp-haproxy-1:~$ oc rsh -n openshift-etcd etcd-ocp-cp-2.lab1.srib-lab-ocp.lan
+sh-5.1#  etcdctl member list -w table
+{"level":"warn","ts":"2024-01-30T12:48:17.79501Z","caller":"flags/flag.go:93","msg":"unrecognized environment variable","environment-variable":"ETCDCTL_ENDPOINTS="}
++------------------+---------+--------------------------------+-------------------------+-------------------------+------------+
+|        ID        | STATUS  |              NAME              |       PEER ADDRS        |      CLIENT ADDRS       | IS LEARNER |
++------------------+---------+--------------------------------+-------------------------+-------------------------+------------+
+|   4bb3db0971442d | started | ocp-cp-2.lab1.srib-lab-ocp.lan | https://71.1.1.230:2380 | https://71.1.1.230:2379 |      false |
+| d625334ff6855226 | started |                 etcd-bootstrap | https://70.1.1.124:2380 | https://70.1.1.124:2379 |      false |
+| fbca6dbc61206b27 | started | ocp-cp-3.lab1.srib-lab-ocp.lan | https://71.1.1.227:2380 | https://71.1.1.227:2379 |      false |
++------------------+---------+--------------------------------+-------------------------+-------------------------+------------+
+sh-5.1# etcdctl member remove d625334ff6855226
+{"level":"warn","ts":"2024-01-30T12:48:59.485626Z","caller":"flags/flag.go:93","msg":"unrecognized environment variable","environment-variable":"ETCDCTL_ENDPOINTS="}
+Member d625334ff6855226 removed from cluster a43e317b07b461c3
+sh-5.1# ^C
+sh-5.1# exit
+exit
+command terminated with exit code 130
+srib@ocp-haproxy-1:~$
+
+
+6.4. Watch all cluster operators to become available
+
+
+oc get co
+
+
+srib@ocp-haproxy-4:~$ oc get co
+NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
+authentication                             4.14.38   True        False         False      32m
+baremetal                                  4.14.38   True        False         False      47m
+cloud-controller-manager                   4.14.38   True        False         False      51m
+cloud-credential                           4.14.38   True        False         False      51m
+cluster-autoscaler                         4.14.38   True        False         False      47m
+config-operator                            4.14.38   True        False         False      48m
+console                                    4.14.38   True        False         False      40m
+control-plane-machine-set                  4.14.38   True        False         False      47m
+csi-snapshot-controller                    4.14.38   True        False         False      48m
+
+
+6.5. Edit ingress controller in Masters
+6.5.1.  Initial ingress controller pods
+
+
+srib@ocp-haproxy-4:~$ oc get po -n openshift-ingress -o wide
+NAME                              READY   STATUS    RESTARTS        AGE     IP           NODE                            NOMINATED NODE   READINESS GATES
+router-default-5854d4865b-hhbd2   1/1     Running   2 (2d13h ago)   2d13h   71.1.1.5     master1.lab4.srib-lab-ocp.lan   <none>           <none>
+router-default-5854d4865b-j95pc   1/1     Running   2 (2d13h ago)   2d13h   71.1.1.105   master2.lab4.srib-lab-ocp.lan   <none>           <none>
+srib@ocp-haproxy-4:~$
+6.5.2.  Edit replicas to 3 in ingress controllers
+oc edit ingresscontroller default -n openshift-ingress-operator
+
+spec:
+...
+  replicas: 3
+
+
+
+oc get ingresscontroller default -n openshift-ingress-operator -o yaml Collapse source
+
+
+srib@ocp-haproxy-4:~$ oc edit ingresscontroller default -n openshift-ingress-operator
+ingresscontroller.operator.openshift.io/default edited
+srib@ocp-haproxy-4:~$
+srib@ocp-haproxy-4:~$ oc get ingresscontroller default -n openshift-ingress-operator -o yaml
+apiVersion: operator.openshift.io/v1
+kind: IngressController
+metadata:
+  creationTimestamp: "2024-12-03T15:25:34Z"
+  finalizers:
+  - ingresscontroller.operator.openshift.io/finalizer-ingresscontroller
+  generation: 2
+  name: default
+  namespace: openshift-ingress-operator
+  resourceVersion: "158954"
+  uid: a0ef489c-3884-46e0-8e66-aa2970702969
+spec:
+  clientTLS:
+    clientCA:
+      name: ""
+    clientCertificatePolicy: ""
+  httpCompression: {}
+  httpEmptyRequestsPolicy: Respond
+  httpErrorCodePages:
+    name: ""
+  replicas: 3
+  tuningOptions:
+    reloadInterval: 0s
+  unsupportedConfigOverrides: null
+status:
+  availableReplicas: 2
+  conditions:
+  - lastTransitionTime: "2024-12-03T15:25:03Z"
+    reason: Valid
+    status: "True"
+    type: Admitted
+  - lastTransitionTime: "2024-12-03T15:31:16Z"
+    message: The deployment has Available status condition set to True
+    reason: DeploymentAvailable
+    status: "True"
+    type: DeploymentAvailable
+  - lastTransitionTime: "2024-12-03T15:31:16Z"
+    message: Minimum replicas requirement is met
+    reason: DeploymentMinimumReplicasMet
+    status: "True"
+    type: DeploymentReplicasMinAvailable
+  - lastTransitionTime: "2024-12-03T16:16:15Z"
+    message: 2/3 of replicas are available
+    reason: DeploymentReplicasNotAvailable
+    status: "False"
+    type: DeploymentReplicasAllAvailable
+  - lastTransitionTime: "2024-12-03T16:16:15Z"
+    message: |
+      Waiting for router deployment rollout to finish: 2 of 3 updated replica(s) are available...
+    reason: DeploymentRollingOut
+    status: "True"
+    type: DeploymentRollingOut
+  - lastTransitionTime: "2024-12-03T15:25:04Z"
+    message: The configured endpoint publishing strategy does not include a managed
+      load balancer
+    reason: EndpointPublishingStrategyExcludesManagedLoadBalancer
+    status: "False"
+    type: LoadBalancerManaged
+  - lastTransitionTime: "2024-12-03T15:25:04Z"
+    message: LoadBalancer is not progressing
+    reason: LoadBalancerNotProgressing
+    status: "False"
+    type: LoadBalancerProgressing
+  - lastTransitionTime: "2024-12-03T15:25:04Z"
+    message: No DNS zones are defined in the cluster dns config.
+    reason: NoDNSZones
+    status: "False"
+    type: DNSManaged
+  - lastTransitionTime: "2024-12-03T15:31:16Z"
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2024-12-03T16:16:15Z"
+    message: |-
+      One or more status conditions indicate progressing: DeploymentRollingOut=True (DeploymentRollingOut: Waiting for router deployment rollout to finish: 2 of 3 updated replica(s) are available...
+      )
+    reason: IngressControllerProgressing
+    status: "True"
+    type: Progressing
+  - lastTransitionTime: "2024-12-03T15:31:20Z"
+    status: "False"
+    type: Degraded
+  - lastTransitionTime: "2024-12-03T15:25:04Z"
+    message: IngressController is upgradeable.
+    reason: Upgradeable
+    status: "True"
+    type: Upgradeable
+  - lastTransitionTime: "2024-12-03T15:25:04Z"
+    message: No evaluation condition is detected.
+    reason: NoEvaluationCondition
+    status: "False"
+    type: EvaluationConditionsDetected
+  - lastTransitionTime: "2024-12-03T15:31:20Z"
+    message: Canary route checks for the default ingress controller are successful
+    reason: CanaryChecksSucceeding
+    status: "True"
+    type: CanaryChecksSucceeding
+  domain: apps.lab4.srib-lab-ocp.lan
+  endpointPublishingStrategy:
+    hostNetwork:
+      httpPort: 80
+      httpsPort: 443
+      protocol: TCP
+      statsPort: 1936
+    type: HostNetwork
+  observedGeneration: 2
+  selector: ingresscontroller.operator.openshift.io/deployment-ingresscontroller=default
+  tlsProfile:
+    ciphers:
+    - ECDHE-ECDSA-AES128-GCM-SHA256
+    - ECDHE-RSA-AES128-GCM-SHA256
+    - ECDHE-ECDSA-AES256-GCM-SHA384
+    - ECDHE-RSA-AES256-GCM-SHA384
+    - ECDHE-ECDSA-CHACHA20-POLY1305
+    - ECDHE-RSA-CHACHA20-POLY1305
+    - DHE-RSA-AES128-GCM-SHA256
+    - DHE-RSA-AES256-GCM-SHA384
+    - TLS_AES_128_GCM_SHA256
+    - TLS_AES_256_GCM_SHA384
+    - TLS_CHACHA20_POLY1305_SHA256
+    minTLSVersion: VersionTLS12
+srib@ocp-haproxy-4:~$
+6.5.3. Modified ingress controller pods
+
+
+srib@ocp-haproxy-4:~$ oc get po -n openshift-ingress -o wide
+NAME                              READY   STATUS    RESTARTS      AGE   IP           NODE                            NOMINATED NODE   READINESS GATES
+router-default-5854d4865b-6fmg2   1/1     Running   2 (46m ago)   51m   71.1.1.5     master1.lab4.srib-lab-ocp.lan   <none>           <none>
+router-default-5854d4865b-kww49   1/1     Running   2 (46m ago)   51m   71.1.1.105   master2.lab4.srib-lab-ocp.lan   <none>           <none>
+router-default-5854d4865b-xxphw   1/1     Running   0             53s   71.1.1.109   master3.lab4.srib-lab-ocp.lan   <none>           <none>
+srib@ocp-haproxy-4:~$
+
+
+
+
+6.6. Check HA Proxy Dashboard for Status 
+6.6.1. Or Use CLI if Web Console is not accessible
+
+
+srib@ocp-haproxy-4:~$ echo "show stat" | sudo nc -U /var/lib/haproxy/stats | cut -d "," -f 1,2,8,9,10,18,74 | column -s, -t
+# pxname                            svname    stot  bin     bout     status  addr
+stats                               FRONTEND  0     0       0        OPEN
+stats                               BACKEND   0     0       0        UP
+k8s_api_frontend                    FRONTEND  80    271661  6019315  OPEN
+k8s_api_backend                     master1   37    28839   312088   UP      71.1.1.5:6443
+k8s_api_backend                     master2   26    239291  5698656  UP      71.1.1.105:6443
+k8s_api_backend                     master3   17    3531    8571     UP      71.1.1.109:6443
+k8s_api_backend                     BACKEND   80    271661  6019315  UP
+ocp_machine_config_server_frontend  FRONTEND  0     0       0        OPEN
+ocp_machine_config_server_backend   master1   0     0       0        UP      71.1.1.5:22623
+ocp_machine_config_server_backend   master2   0     0       0        UP      71.1.1.105:22623
+ocp_machine_config_server_backend   master3   0     0       0        UP      71.1.1.109:22623
+ocp_machine_config_server_backend   BACKEND   0     0       0        UP
+ocp_http_ingress_frontend           FRONTEND  0     0       0        OPEN
+ocp_http_ingress_backend            master1   0     0       0        UP      71.1.1.5:80
+ocp_http_ingress_backend            master2   0     0       0        UP      71.1.1.105:80
+ocp_http_ingress_backend            master3   0     0       0        UP      71.1.1.109:80
+ocp_http_ingress_backend            BACKEND   0     0       0        UP
+ocp_https_ingress_frontend          FRONTEND  59    32614   252298   OPEN
+ocp_https_ingress_backend           master1   1     0       0        UP      71.1.1.5:443
+ocp_https_ingress_backend           master2   53    29786   236242   UP      71.1.1.105:443
+ocp_https_ingress_backend           master3   5     2828    16056    UP      71.1.1.109:443
+ocp_https_ingress_backend           BACKEND   59    32614   252298   UP
+srib@ocp-haproxy-4:~$
+6.7. Verify cpu-partitioning machine configuration is enabled
+
+
+srib@ocp-haproxy-4:~$ oc get mc | grep -i part
+01-master-cpu-partitioning                                                                    3.2.0             56m
+01-worker-cpu-partitioning                                                                    3.2.0             56m
+srib@ocp-haproxy-4:~$
+
+
+6.8. Set KUBECONFIG in bash for easy access
+
+
+srib@ocp-haproxy-4:~$ vim ~/.bashrc
+...
+export KUBECONFIG=$HOME/ocp-install/auth/kubeconfig
+srib@oc-haproxy-4:~$ bash
+srib@oc-haproxy-4:~$
+srib@ocp-haproxy-4:~$ oc get nodes
+NAME                            STATUS   ROLES                         AGE   VERSION
+master1.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   55m   v1.27.16+03a907c
+master2.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   55m   v1.27.16+03a907c
+master3.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   55m   v1.27.16+03a907c
+srib@ocp-haproxy-4:~$
+srib@ocp-haproxy-4:~$
+srib@ocp-haproxy-4:~$ oc get mcp
+NAME     CONFIG                                             UPDATED   UPDATING   DEGRADED   MACHINECOUNT   READYMACHINECOUNT   UPDATEDMACHINECOUNT   DEGRADEDMACHINECOUNT   AGE
+master   rendered-master-3e416115c9982da8faa2235aaf7db3fb   True      False      False      3              3                   3                     0                      49m
+worker   rendered-worker-9ecc033eb494cecd34fb575e4164a962   True      False      False      0              0                   0                     0                      49m
+srib@ocp-haproxy-4:~$
