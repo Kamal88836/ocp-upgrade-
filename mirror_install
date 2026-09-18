@@ -423,3 +423,215 @@ total 645724
 total 4
 -rw-------. 1 root root 2793 Jun 14 21:07 config.json
 [root@mirror2 mirror-reg]#
+
+
+
+
+[root@mirror2 ocp-config-operator]# oc-mirror list operators --catalog registry.redhat.io/redhat/redhat-operator-index:v4.14
+NAME                                          DISPLAY NAME                                             DEFAULT CHANNEL
+3scale-operator                               Red Hat Integration - 3scale                             threescale-2.14
+advanced-cluster-management                   Advanced Cluster Management for Kubernetes               release-2.10
+amq-broker-rhel8                              Red Hat Integration - AMQ Broker for RHEL 8 (Multiarch)  7.12.x
+amq-online                                    Red Hat Integration - AMQ Online                         stable
+amq-streams                                   Red Hat Streams for Apache Kafka                         stable
+  stable
+businessautomation-operator                   Business Automation                                      stable
+cincinnati-operator                           OpenShift Update Service                                 v1
+cluster-kube-descheduler-operator             Kube Descheduler Operator                                stable
+cluster-logging                               Red Hat OpenShift Logging                                stable-5.9
+cluster-observability-operator                Cluster Observability Operator                           development
+clusterresourceoverride                       ClusterResourceOverride Operator                         stable
+compliance-operator                           Compliance Operator                                      stable
+container-security-operator                   Red Hat Quay Container Security Operator                 stable-3.11
+costmanagement-metrics-operator               Cost Management Metrics Operator                         stable
+cryostat-operator                             Red Hat build of Cryostat                                stable
+datagrid                                      Data Grid                                                8.4.x
+deployment-validation-operator                Deployment Validation Operator                           alpha
+devspaces                                     Red Hat OpenShift Dev Spaces                             stable
+devworkspace-operator                         DevWorkspace Operator                                    fast
+dpu-network-operator                          DPU Network Operator                                     stable
+eap                                           JBoss EAP                                                stable
+elasticsearch-operator                        OpenShift Elasticsearch Operator                         stable-5.8
+external-dns-operator                         ExternalDNS Operator                                     stable-v1
+fence-agents-remediation                      Fence Agents Remediation Operator                        stable
+file-integrity-operator                       File Integrity Operator                                  stable
+fuse-apicurito                                Red Hat Integration - API Designer                       fuse-apicurito-7.13.x
+fuse-console                                  Red Hat Integration - Fuse Console                       7.13.x
+fuse-online                                   Red Hat Integration - Fuse Online                        latest
+
+node-maintenance-operator                     Node Maintenance Operator                                stable
+node-observability-operator                   Node Observability Operator                              alpha
+numaresources-operator                        numaresources-operator                                   4.14
+ocs-client-operator                           OpenShift Data Foundation Client                         stable-4.14
+ocs-operator                                  OpenShift Container Storage                              stable-4.14
+odf-compose-operator                          ODF Compose (DO NOT INSTALL)                             stable-4.14
+odf-csi-addons-operator                       CSI Addons                                               stable-4.14
+odf-multicluster-orchestrator                 ODF Multicluster Orchestrator                            stable-4.14
+odf-operator                                  OpenShift Data Foundation                                stable-4.14
+odr-cluster-operator                          Openshift DR Cluster Operator                            stable-4.14
+odr-hub-operator                              Openshift DR Hub Operator                                stable-4.14
+openshift-builds-operator                     builds for Red Hat OpenShift Operator                    latest
+openshift-cert-manager-operator               cert-manager Operator for Red Hat OpenShift              stable-v1
+openshift-custom-metrics-autoscaler-operator  Custom Metrics Autoscaler                                stable
+
+[root@mirror2 ocp-config-operator]#
+imageset-config.yaml Collapse source
+
+
+kind: ImageSetConfiguration
+apiVersion: mirror.openshift.io/v1alpha2
+mirror:
+  platform:
+    channels:
+    - name: stable-4.14
+      type: ocp
+  operators:
+  - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.14  
+    packages:
+    - name: sriov-network-operator
+    - name: odf-operator
+    - name: odf-csi-addons-operator
+    - name: ocs-operator
+    - name: serverless-operator
+    - name: ptp-operator
+    - name: numaresources-operator
+    - name: lvms-operator
+    - name: local-storage-operator
+    - name: kubernetes-nmstate-operator
+    - name: cluster-logging
+  additionalImages:
+  - name: registry.redhat.io/ubi8/ubi:latest
+  helm: {}
+
+
+Download catalog image to file Collapse source
+
+
+[root@mirror2 ocp-config-operator]# oc-mirror --config=./imageset-config.yaml file://registry
+Creating directory: registry/oc-mirror-workspace/src/publish
+Creating directory: registry/oc-mirror-workspace/src/v2
+Creating directory: registry/oc-mirror-workspace/src/charts
+Creating directory: registry/oc-mirror-workspace/src/release-signatures
+backend is not configured in ./imageset-config.yaml, using stateless mode
+backend is not configured in ./imageset-config.yaml, using stateless mode
+No metadata detected, creating new workspace
+
+wrote mirroring manifests to registry/oc-mirror-workspace/operators.1718605810/manifests-redhat-operator-index
+
+To upload local images to a registry, run:
+
+        oc adm catalog mirror file://redhat/redhat-operator-index:v4.14 REGISTRY/REPOSITORY
+<dir>
+  lvms4/lvms-must-gather-rhel8
+    blobs:
+      registry.redhat.io/lvms4/lvms-must-gather-rhel8 sha256:58812227daace7bbf4d042bc653a7c69b45cc52405c05037789285c7d90161f0 12.17KiB
+      registry.redhat.io/lvms4/lvms-must-gather-rhel8 sha256:e7cda67a50cd97e392099dfdf16c7fa20fdaf362b4d7faf15e45806843c96f89 12.17KiB
+
+    manifests:
+      sha256:48a1c956bfab176ccdd43ab3f1605ada226593d3d8d7c6b9dd287d166bb16071
+      sha256:7729e2a6e0200218d398c81328a909575b32eb7ddc05f28db19d108bcf7f1dae
+      sha256:7f550aabc5045192f2a376cea542a3f7af4f91ae38ec92cc88087424c969e79a
+      sha256:b48d244af8d297034cd369bd5030ffce1337c773843faf96a33e08216191afb1
+      sha256:c267a14958a453fe560fda80e513a45e317b1f659e9a95e2806a02352a8146a0
+      sha256:48a1c956bfab176ccdd43ab3f1605ada226593d3d8d7c6b9dd287d166bb16071 -> 7cba01f0
+
+...
+
+sha256:d29b49c805c939c780ba249dadd347fdbf871bac591bfda9bde29f5dd5e7def9 file://ubi8/openjdk-21
+sha256:86e499efaa15b1ad6221aa4d4fe26e514a8bb721aa3bf7575293b7101eb0e128 file://ubi8/openjdk-21:15dd64ef
+mounted: file://openshift4/kubernetes-nmstate-rhel8-operator sha256:e44e73516474f673e10ff7f8d5ffbfaf9a2f64161ed92c559b54892b4d33fb1d 45.84MiB
+6f2
+info: Mirroring completed in 3h9m52.65s (8.431MB/s)
+Creating archive /root/ocp-config-operator/registry/mirror_seq1_000000.tar
+
+[root@mirror2 ocp-config-operator]#
+ 
+
+
+
+Upload to local mirror registry Collapse source
+
+
+[root@mirror2 ocp-config-operator]# cd registry/
+[root@mirror2 registry]# ls -lrt
+total 95993652
+drwxr-xr-x. 3 root root        4096 Jun 17 12:36 oc-mirror-workspace
+-rw-r--r--. 1 root root 98297480192 Jun 17 15:55 mirror_seq1_000000.tar
+[root@mirror2 registry]#
+[root@mirror2 registry]# oc mirror --from=./mirror_seq1_000000.tar docker://mirror2.srib-lab-ocp.lan:8443
+Checking push permissions for mirror2.srib-lab-ocp.lan:8443
+Publishing image set from archive "./mirror_seq1_000000.tar" to registry "mirror2.srib-lab-ocp.lan:8443"
+metadata has single-use label, using stateless mode
+metadata has single-use label, using stateless mode
+mirror2.srib-lab-ocp.lan:8443/
+  openshift4/ose-sriov-network-operator
+    blobs:
+      file://openshift4/ose-sriov-network-operator sha256:d8190195889efb5333eeec18af9b6c82313edd4db62989bd3a357caca4f13f0e 1.404KiB
+      file://openshift4/ose-sriov-network-operator sha256:af5a3a5a8f3cc75825262e7d00c612519ced4a4003d2c1ee21e9720934fb1cbd 1.413KiB
+      file://openshift4/ose-sriov-network-operator sha256:5d5771e51f28e6b3e7609ebb505bfb1411539e7725ef4ffb34264b8b731088fd 1.42KiB
+      file://openshift4/ose-sriov-network-operator sha256:76364c290476498c967e8118b91f72a69f84331d9aa2d62d1c80a0762451acf3 18.76KiB
+
+    manifests:
+      sha256:1d7f6de61f11d792543c006e764696616d13d38bb2ff0fc2de639400fcd2df66
+      sha256:2f2efd4be1aa527804b6b9c550e99455b7b17fe43f6ffb756a570866e68ca52e
+      sha256:df2f810a4637626ae2fe8447aee5dc7d02960a868d2c2ce5a385aab1895c2190
+      sha256:f185d71747045ae68284558bddc608e879d90fffe999ecdf58bf0ec7435e79fb
+      sha256:2f2efd4be1aa527804b6b9c550e99455b7b17fe43f6ffb756a570866e68ca52e -> 30154ff1
+  stats: shared=0 unique=18 size=526.2MiB ratio=1.00
+
+phase 0:
+  mirror2.srib-lab-ocp.lan:8443 openshift4/ose-sriov-network-operator blobs=18 mounts=0 manifests=5 shared=0
+
+info: Planning completed in 490ms
+uploading: mirror2.srib-lab-ocp.lan:8443/openshift4/ose-sriov-network-operator sha256:76364c290476498c967e8118b91f72a69f84331d9aa2d62d1c80a0762451acf3 18.76KiB
+uploading: mirror2.srib-lab-ocp.lan:8443/openshift4/ose-sriov-network-operator sha256:4beb229b1a18e0a60ebc446d7ff9c815a31177587611d223a03f2a597596054d 11.22MiB
+uploading: mirror2.srib-lab-ocp.lan:8443/openshift4/ose-sriov-network-operator sha256:82a5cfce8509caf63add96c952b187fb7557fce111cddd5980c1defc4c70abdd 22.01MiB
+uploading: mirror2.srib-lab-ocp.lan:8443/openshift4/ose-sriov-network-operator sha256:bc121474bf5f9f3b7fc9a1bf3563d5147c53a1ba54ed89f876f7a5b78dc4182d 69.97MiB
+7MiB
+sha256:1d7f6de61f11d792543c006e764696616d13d38bb2ff0fc2de639400fcd2df66 mirror2.srib-lab-ocp.lan:8443/openshift4/ose-sriov-network-operator
+sha256:f185d71747045ae68284558bddc608e879d90fffe999ecdf58bf0ec7435e79fb mirror2.srib-lab-ocp.lan:8443/openshift4/ose-sriov-network-operator
+sha256:df2f810a4637626ae2fe8447aee5dc7d02960a868d2c2ce5a385aab1895c2190 mirror2.srib-lab-ocp.lan:8443/openshift4/ose-sriov-network-operator
+sha256:2f2efd4be1aa527804b6b9c550e99455b7b17fe43f6ffb756a570866e68ca52e mirror2.srib-lab-ocp.lan:8443/openshift4/ose-sriov-network-operator:30154ff1
+info: Mirroring completed in 4.37s (126.1MB/s)
+mirror2.srib-lab-ocp.lan:8443/
+  openshift-serverless-1/eventing-storage-version-migration-rhel8
+    blobs:
+      file://openshift-serverless-1/eventing-storage-version-migration-rhel8 sha256:37779b4497a54ce737db688cbe5bf652610cf8c733d1e7828dd10f4beccb5cd5 10.59KiB
+      file://openshift-serverless-1/eventing-storage-version-migration-rhel8 sha256:cebee97b79a4e22e4958a4ebcc1337c07152fa2c32428edc72e95119815699c1 10.59KiB
+
+    manifests:
+      sha256:45996687585221ec1d28d786ba1951099221220dc9340ec7b528b484fc71a8ca
+      sha256:4a5e8233812053808fbf4d26dae6cb512027c872f93ccb09a54bd0065d4720f4
+      sha256:7c79cd7b18191d5a2e50055814d7e8173e789f3351068972bb9a337ed7301d1f
+      sha256:904e6e2af897d0b7490b1ddae5cce9af1d4061b373155be75d5d16304f9d7fa5
+      sha256:4a5e8233812053808fbf4d26dae6cb512027c872f93ccb09a54bd0065d4720f4 -> b5813f6f
+  stats: shared=0 unique=9 size=727.6MiB ratio=1.00
+
+phase 0:
+  mirror2.srib-lab-ocp.lan:8443 openshift-serverless-1/eventing-storage-version-migration-rhel8 blobs=9 mounts=0 manifests=5 shared=0
+  
+...
+
+info: Mirroring completed in 16.27s (105.6MB/s)
+Wrote release signatures to oc-mirror-workspace/results-1718620158
+catalogs/registry.redhat.io/redhat/redhat-operator-index/v4.14/include-config.gob
+catalogs/registry.redhat.io/redhat/redhat-operator-index/v4.14/index/index.json
+catalogs/registry.redhat.io/redhat/redhat-operator-index/v4.14/layout/blobs/sha256/0789e16a9a86c07d03fa666682a84e1dfe795d911c7898f756448835e923bb62
+catalogs/registry.redhat.io/redhat/redhat-operator-index/v4.14/layout/blobs/sha256/0aa132a3f1308787844a412f2c38d1633dfd6aa12b34ad446475ab60a9fe1dcf
+4
+
+Writing image mapping to oc-mirror-workspace/results-1718620158/mapping.txt
+Writing CatalogSource manifests to oc-mirror-workspace/results-1718620158
+Writing ICSP manifests to oc-mirror-workspace/results-1718620158
+[root@mirror2 registry]#
+[root@mirror2 registry]#
+7.1. Apply results-<id> folder created by above steps to respective cluster to get this catalog:
+Location of result folder
+
+
+[root@bastion registry]# cd oc-mirror-workspace
+[root@bastion oc-mirror-workspace]# ls -lrt
+total 0
+drwxr-xr-x. 8 root root 116 Jan 13 04:43 src
+drwxr-xr-x. 4 root root 153 Jan 13 05:03 results-1705139555
+[root@bastion oc-mirror-workspace]#
