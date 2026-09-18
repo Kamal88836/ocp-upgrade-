@@ -1,0 +1,604 @@
+4.5.9.  RUN Rook validation tool 
+Get tool from : [OCP] Multus validation tool to test storage network in cluster
+
+Rook Validation Tool Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-config$ ./rook  multus validation run --public-network ocs-public-cluster --namespace openshift-storage --log-level DEBUG --daemons-per-node 10 --timeout-minutes 10 --nginx-image bastion.srib-lab-ocp.lan:8443/nginx/nginx-unprivileged:stable-alpine
+2024/12/04 15:21:51 maxprocs: Leaving GOMAXPROCS=4: CPU quota undefined
+2024-12-04 15:21:51.463941 D | rookcmd: attempting to create kube client interface from KUBCONFIG environment variable: /home/srib/ocp-install/auth/kubeconfig
+2024-12-04 15:21:51.464937 D | rookcmd: attempting to create kube clientset from kube config file "/home/srib/ocp-install/auth/kubeconfig"
+2024-12-04 15:21:51.465546 I | rookcmd: created kube client interface from kube config file "/home/srib/ocp-install/auth/kubeconfig" present in KUBECONFIG environment variable
+2024-12-04 15:21:51.465650 I | multus-validation: starting multus validation test with the following config:
+namespace: openshift-storage
+publicNetwork: ocs-public-cluster
+clusterNetwork: ""
+resourceTimeout: 10m0s
+flakyThreshold: 30s
+nginxImage: mirror2.srib-lab-ocp.lan:8443/nginx/nginx-unprivileged:stable-alpine
+nodeTypes:
+  shared-storage-and-worker-nodes:
+    osdsPerNode: 10
+    otherDaemonsPerNode: 0
+    placement:
+      nodeSelector: {}
+      tolerations: []
+2024-12-04 15:21:51.528925 I | multus-validation: continuing: expected number of image pull pods not yet ready: image pull daemonset for node type "shared-storage-and-worker-nodes" expects zero scheduled pods
+2024-12-04 15:21:53.532731 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:21:55.536430 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:21:57.540742 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:21:59.543371 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:22:01.547128 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:22:03.550655 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:22:05.555526 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:22:07.558541 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:22:09.561637 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:22:11.564490 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:22:13.569180 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:22:15.572513 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:22:17.575588 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:22:19.578425 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:22:21.581313 I | multus-validation: waiting to ensure num expected image pull pods per node type to stabilize at map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:22:25.592427 I | multus-validation: expecting image pull pods to be 'Ready': expected count per node type: map[shared-storage-and-worker-nodes:3]
+2024-12-04 15:22:27.598206 I | multus-validation: cleaning up all 3 'Running' image pull pods
+2024-12-04 15:22:29.603729 I | multus-validation: getting web server info for clients
+2024-12-04 15:22:31.610708 I | multus-validation: starting clients on each node
+2024-12-04 15:22:33.610901 I | multus-validation: starting 10 osd validation clients for node type "shared-storage-and-worker-nodes"
+2024-12-04 15:22:33.656429 I | multus-validation: starting 0 other (non-OSD) validation clients for node type "shared-storage-and-worker-nodes"
+2024-12-04 15:22:33.656448 I | multus-validation: verifying 30 client pods begin 'Running': count per node type: map[shared-storage-and-worker-nodes:30]
+2024-12-04 15:22:35.674118 I | multus-validation: continuing: all 30 client pods are not yet 'Running': found 0
+2024-12-04 15:22:37.691468 I | multus-validation: continuing: all 30 client pods are not yet 'Running': found 17
+2024-12-04 15:22:39.706255 I | multus-validation: verifying all 30 'Running' client pods reach 'Ready' state
+2024-12-04 15:22:41.723949 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:22:43.740529 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:22:45.758191 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:22:47.775765 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:22:49.792780 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:22:51.810025 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:22:53.826882 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:22:55.845555 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:22:57.865517 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:22:59.883319 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:23:01.900866 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:23:03.918723 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:23:05.934269 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:23:07.950356 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:23:09.969903 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:23:11.985117 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:23:14.001846 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:23:16.019111 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:23:18.035246 I | multus-validation: continuing: number of 'Ready' clients [0] is not the number expected [30]
+2024-12-04 15:23:20.053149 D | multus-validation: clients started becoming ready
+2024-12-04 15:23:20.053170 I | multus-validation: continuing: number of 'Ready' clients [3] is not the number expected [30]
+2024-12-04 15:23:22.070733 I | multus-validation: continuing: number of 'Ready' clients [3] is not the number expected [30]
+2024-12-04 15:23:24.085708 I | multus-validation: continuing: number of 'Ready' clients [25] is not the number expected [30]
+2024-12-04 15:23:26.104000 I | multus-validation: continuing: number of 'Ready' clients [28] is not the number expected [30]
+2024-12-04 15:23:28.121496 I | multus-validation: continuing: number of 'Ready' clients [28] is not the number expected [30]
+2024-12-04 15:23:30.138871 I | multus-validation: all 30 clients are 'Ready'
+
+RESULT: multus validation test succeeded!
+
+cleaning up multus validation test resources in namespace "openshift-storage"
+multus validation test resources were successfully cleaned up
+srib@ocp-haproxy-4:~/ocp-config$
+
+# make sure the multus validation tools are cleaned up
+srib@ocp-haproxy-1:~$ oc get pods -n openshift-storage
+NAME                                                              READY   STATUS        RESTARTS   AGE
+csi-addons-controller-manager-8469dd5995-5h7ff                    2/2     Running       0          54m
+multus-validation-test-client-shared-storage-and-worker-nofzk7l   0/1     Terminating   0          65s
+multus-validation-test-client-shared-storage-and-worker-nor69mv   0/1     Terminating   0          65s
+noobaa-operator-668557bb96-bgc6b                                  1/1     Running       0          54m
+ocs-metrics-exporter-85fd6cb54d-t7qwp                             1/1     Running       0          54m
+ocs-operator-67699bb7d8-xbkvh                                     1/1     Running       0          54m
+odf-console-849b96bd69-m2l5q                                      1/1     Running       0          54m
+odf-operator-controller-manager-6bc9dc57cd-cggcs                  2/2     Running       0          54m
+rook-ceph-operator-55958c57cd-j6js4                               1/1     Running       0          54m
+ux-backend-server-f854589c8-j729v                                 2/2     Running       0          54m
+srib@ocp-haproxy-1:~$
+
+4.5.10. Install Storage Cluster:
+
+storagecluster.yaml Collapse source
+
+
+apiVersion: ocs.openshift.io/v1
+kind: StorageCluster
+metadata:
+ name: ocs-storagecluster
+ namespace: openshift-storage
+spec:
+ manageNodes: false
+ resources:
+   mds:
+     limits:
+       cpu: "2"
+       memory: "8Gi"
+     requests:
+       cpu: "2"
+       memory: "8Gi"
+ monDataDirHostPath: /var/lib/rook
+ storageDeviceSets:
+ - count: 1  # <-- Modify count to desired value. For each set of 3 disks increment the count by 1.
+   dataPVCTemplate:
+     spec:
+       accessModes:
+       - ReadWriteOnce
+       resources:
+         requests:
+           storage: "1000Gi"  # <-- This should be changed as per storage size. Minimum 100 GiB and Maximum 4 TiB
+       storageClassName: localblock
+       volumeMode: Block
+   name: ocs-deviceset
+   placement: {}
+   portable: false
+   replica: 3
+   resources:
+     limits:
+       cpu: "2"
+       memory: "5Gi"
+     requests:
+       cpu: "2"
+       memory: "5Gi"
+ network:
+   provider: multus
+   selectors:
+     public: ocs-public-cluster
+Apply OCS ODF Operator
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc apply -f storagecluster.yaml
+storagecluster.ocs.openshift.io/ocs-storagecluster created
+srib@ocp-haproxy-4:~/ocp-config$
+Important: If Internal cluster Network is IPV6, Execute:
+
+oc -n openshift-storage patch storagecluster ocs-storagecluster --type=merge -p '{"spec":{"network":{"ipFamily":"IPv6"}}}'
+
+Verification
+
+All the pods in the openshift-storage namespace must be in either Running or Completed state.
+Cluster creation might take around 5 - 10 mins to complete. Please keep monitoring until you see the expected state or you see an error or you find progress stuck even after waiting for a longer period.
+
+Verfiy openshift-storage Pods
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc get pods -n openshift-storage
+NAME                                                              READY   STATUS      RESTARTS      AGE
+csi-addons-controller-manager-5456d75867-nbttb                    2/2     Running     0             60m
+csi-cephfsplugin-7bgfr                                            2/2     Running     0             29m
+csi-cephfsplugin-dgp4s                                            2/2     Running     0             30m
+csi-cephfsplugin-holder-ocs-storagecluster-cephcluster-9ss9w      1/1     Running     0             30m
+csi-cephfsplugin-holder-ocs-storagecluster-cephcluster-bdgfw      1/1     Running     0             30m
+csi-cephfsplugin-holder-ocs-storagecluster-cephcluster-lwjmz      1/1     Running     0             30m
+csi-cephfsplugin-provisioner-557669668d-8rm8d                     5/5     Running     0             30m
+csi-cephfsplugin-provisioner-557669668d-bblgx                     5/5     Running     0             30m
+csi-cephfsplugin-t9qvc                                            2/2     Running     0             29m
+csi-rbdplugin-9x6sh                                               3/3     Running     0             29m
+csi-rbdplugin-bg4x8                                               3/3     Running     0             29m
+csi-rbdplugin-holder-ocs-storagecluster-cephcluster-b8j4d         1/1     Running     0             30m
+csi-rbdplugin-holder-ocs-storagecluster-cephcluster-lvscl         1/1     Running     0             30m
+csi-rbdplugin-holder-ocs-storagecluster-cephcluster-qkwt4         1/1     Running     0             30m
+csi-rbdplugin-provisioner-764675bbf9-4t8fs                        6/6     Running     1 (29m ago)   30m
+csi-rbdplugin-provisioner-764675bbf9-gfpkt                        6/6     Running     0             30m
+csi-rbdplugin-sjw5r                                               3/3     Running     0             29m
+noobaa-core-0                                                     1/1     Running     0             27m
+noobaa-db-pg-0                                                    1/1     Running     0             27m   ===============> this pod should be in running state. If not, then some problem in MULTUS configuration.
+noobaa-endpoint-7f4775d5d8-ccnst                                  1/1     Running     0             25m
+noobaa-operator-66b8947749-9ccf6                                  1/1     Running     0             61m
+ocs-metrics-exporter-7c4666d88b-vmqcg                             1/1     Running     0             61m
+ocs-operator-c78db4b95-v5gj8                                      1/1     Running     0             61m
+odf-console-558578c85f-jrdsk                                      1/1     Running     0             61m
+odf-operator-controller-manager-b6b9cd7c6-n9dhr                   2/2     Running     0             61m
+rook-ceph-crashcollector-master1.lab4.srib-lab-ocp.lan-757zzqs2   1/1     Running     0             27m
+rook-ceph-crashcollector-master2.lab4.srib-lab-ocp.lan-c55mf4xn   1/1     Running     0             27m
+rook-ceph-crashcollector-master3.lab4.srib-lab-ocp.lan-78dgvlgk   1/1     Running     0             27m
+rook-ceph-exporter-master1.lab4.srib-lab-ocp.lan-664f79f86npntl   1/1     Running     0             27m
+rook-ceph-exporter-master2.lab4.srib-lab-ocp.lan-8686fbb66nrtvq   1/1     Running     0             27m
+rook-ceph-exporter-master3.lab4.srib-lab-ocp.lan-6787cdcbcxxfzs   1/1     Running     0             27m
+rook-ceph-mds-ocs-storagecluster-cephfilesystem-a-7f5d79bcrtxv6   2/2     Running     0             27m
+rook-ceph-mds-ocs-storagecluster-cephfilesystem-b-59ddf676b5wwk   2/2     Running     0             27m
+rook-ceph-mgr-a-67f6c5b697-d9f6w                                  3/3     Running     0             28m
+rook-ceph-mon-a-849f554676-8xr4h                                  2/2     Running     0             30m
+rook-ceph-mon-b-75bd4d4fb7-mf2qf                                  2/2     Running     0             28m
+rook-ceph-mon-c-5b7b79d679-2d96d                                  2/2     Running     0             28m
+rook-ceph-operator-6c9b8847dd-v2lml                               1/1     Running     0             30m
+rook-ceph-osd-0-6559894c46-crbqd                                  2/2     Running     0             27m
+rook-ceph-osd-1-5c464c56c9-mg6fx                                  2/2     Running     0             27m
+rook-ceph-osd-2-5874864c64-cthhf                                  2/2     Running     0             27m
+rook-ceph-osd-prepare-ocs-deviceset-0-data-0nvtrk-mtb9q           0/1     Completed   0             27m
+rook-ceph-osd-prepare-ocs-deviceset-1-data-0699sg-s4l27           0/1     Completed   0             27m
+rook-ceph-osd-prepare-ocs-deviceset-2-data-0jq2ps-dhfmn           0/1     Completed   0             27m
+rook-ceph-rgw-ocs-storagecluster-cephobjectstore-a-855dbff88jd4   2/2     Running     0             27m
+ux-backend-server-9f7bb5c66-2dlbc                                 2/2     Running     0             61m
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc get storageclass
+NAME                          PROVISIONER                             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+localblock                    kubernetes.io/no-provisioner            Delete          WaitForFirstConsumer   false                  67m
+ocs-storagecluster-ceph-rbd   openshift-storage.rbd.csi.ceph.com      Delete          Immediate              true                   27m
+ocs-storagecluster-ceph-rgw   openshift-storage.ceph.rook.io/bucket   Delete          Immediate              false                  31m
+ocs-storagecluster-cephfs     openshift-storage.cephfs.csi.ceph.com   Delete          Immediate              true                   27m
+openshift-storage.noobaa.io   openshift-storage.noobaa.io/obc         Delete          Immediate              false                  26m
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+Check Storage Pod CPU Per Node Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc get pods -n openshift-storage -o custom-columns="Name:metadata.name,CPU-limit:spec.containers[*].resources.limits.cpu,CPU-requests:spec.containers[*].resources.requests.cpu,NODE:spec.nodeName"
+Name                                                              CPU-limit   CPU-requests   NODE
+csi-addons-controller-manager-5456d75867-nbttb                    1,500m      10m,10m        master2.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-7bgfr                                            <none>      <none>         master3.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-dgp4s                                            <none>      <none>         master2.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-holder-ocs-storagecluster-cephcluster-9ss9w      <none>      <none>         master1.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-holder-ocs-storagecluster-cephcluster-bdgfw      <none>      <none>         master2.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-holder-ocs-storagecluster-cephcluster-lwjmz      <none>      <none>         master3.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-provisioner-557669668d-8rm8d                     <none>      <none>         master1.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-provisioner-557669668d-bblgx                     <none>      <none>         master2.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-t9qvc                                            <none>      <none>         master1.lab4.srib-lab-ocp.lan
+csi-rbdplugin-9x6sh                                               <none>      <none>         master3.lab4.srib-lab-ocp.lan
+csi-rbdplugin-bg4x8                                               <none>      <none>         master1.lab4.srib-lab-ocp.lan
+csi-rbdplugin-holder-ocs-storagecluster-cephcluster-b8j4d         <none>      <none>         master3.lab4.srib-lab-ocp.lan
+csi-rbdplugin-holder-ocs-storagecluster-cephcluster-lvscl         <none>      <none>         master1.lab4.srib-lab-ocp.lan
+csi-rbdplugin-holder-ocs-storagecluster-cephcluster-qkwt4         <none>      <none>         master2.lab4.srib-lab-ocp.lan
+csi-rbdplugin-provisioner-764675bbf9-4t8fs                        <none>      <none>         master1.lab4.srib-lab-ocp.lan
+csi-rbdplugin-provisioner-764675bbf9-gfpkt                        <none>      <none>         master2.lab4.srib-lab-ocp.lan
+csi-rbdplugin-sjw5r                                               <none>      <none>         master2.lab4.srib-lab-ocp.lan
+noobaa-core-0                                                     999m        999m           master2.lab4.srib-lab-ocp.lan
+noobaa-db-pg-0                                                    500m        500m           master2.lab4.srib-lab-ocp.lan
+noobaa-endpoint-7f4775d5d8-ccnst                                  999m        999m           master2.lab4.srib-lab-ocp.lan
+noobaa-operator-66b8947749-9ccf6                                  250m        250m           master2.lab4.srib-lab-ocp.lan
+ocs-metrics-exporter-7c4666d88b-vmqcg                             <none>      <none>         master2.lab4.srib-lab-ocp.lan
+ocs-operator-c78db4b95-v5gj8                                      <none>      <none>         master2.lab4.srib-lab-ocp.lan
+odf-console-558578c85f-jrdsk                                      100m        100m           master2.lab4.srib-lab-ocp.lan
+odf-operator-controller-manager-b6b9cd7c6-n9dhr                   200m        200m           master2.lab4.srib-lab-ocp.lan
+rook-ceph-crashcollector-master1.lab4.srib-lab-ocp.lan-757zzqs2   <none>      <none>         master1.lab4.srib-lab-ocp.lan
+rook-ceph-crashcollector-master2.lab4.srib-lab-ocp.lan-c55mf4xn   <none>      <none>         master2.lab4.srib-lab-ocp.lan
+rook-ceph-crashcollector-master3.lab4.srib-lab-ocp.lan-78dgvlgk   <none>      <none>         master3.lab4.srib-lab-ocp.lan
+rook-ceph-exporter-master1.lab4.srib-lab-ocp.lan-664f79f86npntl   <none>      <none>         master1.lab4.srib-lab-ocp.lan
+rook-ceph-exporter-master2.lab4.srib-lab-ocp.lan-8686fbb66nrtvq   <none>      <none>         master2.lab4.srib-lab-ocp.lan
+rook-ceph-exporter-master3.lab4.srib-lab-ocp.lan-6787cdcbcxxfzs   <none>      <none>         master3.lab4.srib-lab-ocp.lan
+rook-ceph-mds-ocs-storagecluster-cephfilesystem-a-7f5d79bcrtxv6   2           2              master1.lab4.srib-lab-ocp.lan
+rook-ceph-mds-ocs-storagecluster-cephfilesystem-b-59ddf676b5wwk   2           2              master3.lab4.srib-lab-ocp.lan
+rook-ceph-mgr-a-67f6c5b697-d9f6w                                  1,1         1,1            master1.lab4.srib-lab-ocp.lan
+rook-ceph-mon-a-849f554676-8xr4h                                  1           1              master1.lab4.srib-lab-ocp.lan
+rook-ceph-mon-b-75bd4d4fb7-mf2qf                                  1           1              master3.lab4.srib-lab-ocp.lan
+rook-ceph-mon-c-5b7b79d679-2d96d                                  1           1              master2.lab4.srib-lab-ocp.lan
+rook-ceph-operator-6c9b8847dd-v2lml                               <none>      <none>         master2.lab4.srib-lab-ocp.lan
+rook-ceph-osd-0-6559894c46-crbqd                                  2           2              master3.lab4.srib-lab-ocp.lan
+rook-ceph-osd-1-5c464c56c9-mg6fx                                  2           2              master1.lab4.srib-lab-ocp.lan
+rook-ceph-osd-2-5874864c64-cthhf                                  2           2              master2.lab4.srib-lab-ocp.lan
+rook-ceph-osd-prepare-ocs-deviceset-0-data-0nvtrk-mtb9q           <none>      <none>         master1.lab4.srib-lab-ocp.lan
+rook-ceph-osd-prepare-ocs-deviceset-1-data-0699sg-s4l27           <none>      <none>         master3.lab4.srib-lab-ocp.lan
+rook-ceph-osd-prepare-ocs-deviceset-2-data-0jq2ps-dhfmn           <none>      <none>         master2.lab4.srib-lab-ocp.lan
+rook-ceph-rgw-ocs-storagecluster-cephobjectstore-a-855dbff88jd4   2           2              master1.lab4.srib-lab-ocp.lan
+ux-backend-server-9f7bb5c66-2dlbc                                 <none>      <none>         master2.lab4.srib-lab-ocp.lan
+srib@ocp-haproxy-4:~/ocp-config$
+
+srib@ocp-haproxy-4:~/ocp-config$ oc get pods -n openshift-storage -o custom-columns="Name:metadata.name,CPU-limit:spec.containers[*].resources.limits.cpu,CPU-requests:spec.containers[*].resources.requests.cpu,NODE:spec.nodeName" | egrep "Name|master1"
+Name                                                              CPU-limit   CPU-requests   NODE
+csi-cephfsplugin-holder-ocs-storagecluster-cephcluster-9ss9w      <none>      <none>         master1.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-provisioner-557669668d-8rm8d                     <none>      <none>         master1.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-t9qvc                                            <none>      <none>         master1.lab4.srib-lab-ocp.lan
+csi-rbdplugin-bg4x8                                               <none>      <none>         master1.lab4.srib-lab-ocp.lan
+csi-rbdplugin-holder-ocs-storagecluster-cephcluster-lvscl         <none>      <none>         master1.lab4.srib-lab-ocp.lan
+csi-rbdplugin-provisioner-764675bbf9-4t8fs                        <none>      <none>         master1.lab4.srib-lab-ocp.lan
+rook-ceph-crashcollector-master1.lab4.srib-lab-ocp.lan-757zzqs2   <none>      <none>         master1.lab4.srib-lab-ocp.lan
+rook-ceph-exporter-master1.lab4.srib-lab-ocp.lan-664f79f86npntl   <none>      <none>         master1.lab4.srib-lab-ocp.lan
+rook-ceph-mds-ocs-storagecluster-cephfilesystem-a-7f5d79bcrtxv6   2           2              master1.lab4.srib-lab-ocp.lan
+rook-ceph-mgr-a-67f6c5b697-d9f6w                                  1,1         1,1            master1.lab4.srib-lab-ocp.lan
+rook-ceph-mon-a-849f554676-8xr4h                                  1           1              master1.lab4.srib-lab-ocp.lan
+rook-ceph-osd-1-5c464c56c9-mg6fx                                  2           2              master1.lab4.srib-lab-ocp.lan
+rook-ceph-osd-prepare-ocs-deviceset-0-data-0nvtrk-mtb9q           <none>      <none>         master1.lab4.srib-lab-ocp.lan
+rook-ceph-rgw-ocs-storagecluster-cephobjectstore-a-855dbff88jd4   2           2              master1.lab4.srib-lab-ocp.lan
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$ oc get pods -n openshift-storage -o custom-columns="Name:metadata.name,CPU-limit:spec.containers[*].resources.limits.cpu,CPU-requests:spec.containers[*].resources.requests.cpu,NODE:spec.nodeName" | egrep "Name|master2"
+Name                                                              CPU-limit   CPU-requests   NODE
+csi-addons-controller-manager-5456d75867-nbttb                    1,500m      10m,10m        master2.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-dgp4s                                            <none>      <none>         master2.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-holder-ocs-storagecluster-cephcluster-bdgfw      <none>      <none>         master2.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-provisioner-557669668d-bblgx                     <none>      <none>         master2.lab4.srib-lab-ocp.lan
+csi-rbdplugin-holder-ocs-storagecluster-cephcluster-qkwt4         <none>      <none>         master2.lab4.srib-lab-ocp.lan
+csi-rbdplugin-provisioner-764675bbf9-gfpkt                        <none>      <none>         master2.lab4.srib-lab-ocp.lan
+csi-rbdplugin-sjw5r                                               <none>      <none>         master2.lab4.srib-lab-ocp.lan
+noobaa-core-0                                                     999m        999m           master2.lab4.srib-lab-ocp.lan
+noobaa-db-pg-0                                                    500m        500m           master2.lab4.srib-lab-ocp.lan
+noobaa-endpoint-7f4775d5d8-ccnst                                  999m        999m           master2.lab4.srib-lab-ocp.lan
+noobaa-operator-66b8947749-9ccf6                                  250m        250m           master2.lab4.srib-lab-ocp.lan
+ocs-metrics-exporter-7c4666d88b-vmqcg                             <none>      <none>         master2.lab4.srib-lab-ocp.lan
+ocs-operator-c78db4b95-v5gj8                                      <none>      <none>         master2.lab4.srib-lab-ocp.lan
+odf-console-558578c85f-jrdsk                                      100m        100m           master2.lab4.srib-lab-ocp.lan
+odf-operator-controller-manager-b6b9cd7c6-n9dhr                   200m        200m           master2.lab4.srib-lab-ocp.lan
+rook-ceph-crashcollector-master2.lab4.srib-lab-ocp.lan-c55mf4xn   <none>      <none>         master2.lab4.srib-lab-ocp.lan
+rook-ceph-exporter-master2.lab4.srib-lab-ocp.lan-8686fbb66nrtvq   <none>      <none>         master2.lab4.srib-lab-ocp.lan
+rook-ceph-mon-c-5b7b79d679-2d96d                                  1           1              master2.lab4.srib-lab-ocp.lan
+rook-ceph-operator-6c9b8847dd-v2lml                               <none>      <none>         master2.lab4.srib-lab-ocp.lan
+rook-ceph-osd-2-5874864c64-cthhf                                  2           2              master2.lab4.srib-lab-ocp.lan
+rook-ceph-osd-prepare-ocs-deviceset-2-data-0jq2ps-dhfmn           <none>      <none>         master2.lab4.srib-lab-ocp.lan
+ux-backend-server-9f7bb5c66-2dlbc                                 <none>      <none>         master2.lab4.srib-lab-ocp.lan
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$ oc get pods -n openshift-storage -o custom-columns="Name:metadata.name,CPU-limit:spec.containers[*].resources.limits.cpu,CPU-requests:spec.containers[*].resources.requests.cpu,NODE:spec.nodeName" | egrep "Name|master3"
+Name                                                              CPU-limit   CPU-requests   NODE
+csi-cephfsplugin-7bgfr                                            <none>      <none>         master3.lab4.srib-lab-ocp.lan
+csi-cephfsplugin-holder-ocs-storagecluster-cephcluster-lwjmz      <none>      <none>         master3.lab4.srib-lab-ocp.lan
+csi-rbdplugin-9x6sh                                               <none>      <none>         master3.lab4.srib-lab-ocp.lan
+csi-rbdplugin-holder-ocs-storagecluster-cephcluster-b8j4d         <none>      <none>         master3.lab4.srib-lab-ocp.lan
+rook-ceph-crashcollector-master3.lab4.srib-lab-ocp.lan-78dgvlgk   <none>      <none>         master3.lab4.srib-lab-ocp.lan
+rook-ceph-exporter-master3.lab4.srib-lab-ocp.lan-6787cdcbcxxfzs   <none>      <none>         master3.lab4.srib-lab-ocp.lan
+rook-ceph-mds-ocs-storagecluster-cephfilesystem-b-59ddf676b5wwk   2           2              master3.lab4.srib-lab-ocp.lan
+rook-ceph-mon-b-75bd4d4fb7-mf2qf                                  1           1              master3.lab4.srib-lab-ocp.lan
+rook-ceph-osd-0-6559894c46-crbqd                                  2           2              master3.lab4.srib-lab-ocp.lan
+rook-ceph-osd-prepare-ocs-deviceset-1-data-0699sg-s4l27           <none>      <none>         master3.lab4.srib-lab-ocp.lan
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+Check CEPH Status Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc rsh -n openshift-storage $(oc get pods -n openshift-storage -o name -l app=rook-ceph-operator)
+sh-5.1$ export CEPH_ARGS='-c /var/lib/rook/openshift-storage/openshift-storage.config'
+sh-5.1$ ceph -s
+  cluster:
+    id:     5a4e95c9-0dfd-41c5-bf22-4c70c86814e6
+    health: HEALTH_OK
+
+  services:
+    mon: 3 daemons, quorum a,b,c (age 31m)
+    mgr: a(active, since 31m)
+    mds: 1/1 daemons up, 1 hot standby
+    osd: 3 osds: 3 up (since 30m), 3 in (since 31m)
+    rgw: 1 daemon active (1 hosts, 1 zones)
+
+  data:
+    volumes: 1/1 healthy
+    pools:   12 pools, 169 pgs
+    objects: 474 objects, 184 MiB
+    usage:   298 MiB used, 5.2 TiB / 5.2 TiB avail
+    pgs:     169 active+clean
+
+  io:
+    client:   853 B/s rd, 341 B/s wr, 1 op/s rd, 0 op/s wr
+
+sh-5.1$ ceph osd tree
+ID   CLASS  WEIGHT   TYPE NAME                                   STATUS  REWEIGHT  PRI-AFF
+ -1         5.23979  root default
+ -8         1.74660      rack rack0
+ -7         1.74660          host master1-lab4-srib-lab-ocp-lan
+  1    ssd  1.74660              osd.1                               up   1.00000  1.00000
+-12         1.74660      rack rack1
+-11         1.74660          host master2-lab4-srib-lab-ocp-lan
+  2    ssd  1.74660              osd.2                               up   1.00000  1.00000
+ -4         1.74660      rack rack2
+ -3         1.74660          host master3-lab4-srib-lab-ocp-lan
+  0    ssd  1.74660              osd.0                               up   1.00000  1.00000
+sh-5.1$ ceph osd dump
+epoch 85
+fsid 5a4e95c9-0dfd-41c5-bf22-4c70c86814e6
+created 2024-12-04T15:55:15.467649+0000
+modified 2024-12-04T15:59:05.636468+0000
+flags sortbitwise,recovery_deletes,purged_snapdirs,pglog_hardlimit
+crush_version 10
+full_ratio 0.85
+backfillfull_ratio 0.8
+nearfull_ratio 0.75
+require_min_compat_client luminous
+min_compat_client jewel
+require_osd_release reef
+stretch_mode_enabled false
+pool 1 'ocs-storagecluster-cephblockpool' replicated size 3 min_size 2 crush_rule 1 object_hash rjenkins pg_num 32 pgp_num 32 autoscale_mode on last_change 84 lfor 0/0/25 flags hashpspool,selfmanaged_snaps stripe_width 0 target_size_ratio 0.49 application rbd read_balance_score 1.13
+pool 2 'ocs-storagecluster-cephobjectstore.rgw.otp' replicated size 3 min_size 2 crush_rule 3 object_hash rjenkins pg_num 8 pgp_num 8 autoscale_mode on last_change 17 flags hashpspool stripe_width 0 pg_num_min 8 application rook-ceph-rgw read_balance_score 1.88
+pool 3 'ocs-storagecluster-cephobjectstore.rgw.meta' replicated size 3 min_size 2 crush_rule 2 object_hash rjenkins pg_num 8 pgp_num 8 autoscale_mode on last_change 17 flags hashpspool stripe_width 0 pg_num_min 8 application rook-ceph-rgw read_balance_score 1.50
+pool 4 'ocs-storagecluster-cephobjectstore.rgw.control' replicated size 3 min_size 2 crush_rule 5 object_hash rjenkins pg_num 8 pgp_num 8 autoscale_mode on last_change 17 flags hashpspool stripe_width 0 pg_num_min 8 application rook-ceph-rgw read_balance_score 1.50
+pool 5 'ocs-storagecluster-cephobjectstore.rgw.buckets.index' replicated size 3 min_size 2 crush_rule 6 object_hash rjenkins pg_num 8 pgp_num 8 autoscale_mode on last_change 17 flags hashpspool stripe_width 0 pg_num_min 8 application rook-ceph-rgw read_balance_score 1.50
+pool 6 '.rgw.root' replicated size 3 min_size 2 crush_rule 8 object_hash rjenkins pg_num 8 pgp_num 8 autoscale_mode on last_change 17 flags hashpspool stripe_width 0 pg_num_min 8 application rook-ceph-rgw read_balance_score 1.13
+pool 7 'ocs-storagecluster-cephobjectstore.rgw.buckets.non-ec' replicated size 3 min_size 2 crush_rule 7 object_hash rjenkins pg_num 8 pgp_num 8 autoscale_mode on last_change 17 flags hashpspool stripe_width 0 pg_num_min 8 application rook-ceph-rgw read_balance_score 1.50
+pool 8 'ocs-storagecluster-cephobjectstore.rgw.log' replicated size 3 min_size 2 crush_rule 4 object_hash rjenkins pg_num 8 pgp_num 8 autoscale_mode on last_change 17 flags hashpspool stripe_width 0 pg_num_min 8 application rook-ceph-rgw read_balance_score 1.88
+pool 9 'ocs-storagecluster-cephfilesystem-metadata' replicated size 3 min_size 2 crush_rule 9 object_hash rjenkins pg_num 16 pgp_num 16 autoscale_mode on last_change 57 lfor 0/0/25 flags hashpspool stripe_width 0 pg_autoscale_bias 4 pg_num_min 16 recovery_priority 5 application cephfs read_balance_score 1.31
+pool 10 '.mgr' replicated size 3 min_size 2 crush_rule 0 object_hash rjenkins pg_num 1 pgp_num 1 autoscale_mode on last_change 19 flags hashpspool stripe_width 0 pg_num_max 32 pg_num_min 1 application mgr read_balance_score 3.00
+pool 11 'ocs-storagecluster-cephobjectstore.rgw.buckets.data' replicated size 3 min_size 2 crush_rule 10 object_hash rjenkins pg_num 32 pgp_num 32 autoscale_mode on last_change 29 lfor 0/0/27 flags hashpspool stripe_width 0 target_size_ratio 0.49 application rook-ceph-rgw read_balance_score 1.31
+pool 12 'ocs-storagecluster-cephfilesystem-data0' replicated size 3 min_size 2 crush_rule 11 object_hash rjenkins pg_num 32 pgp_num 32 autoscale_mode on last_change 29 lfor 0/0/27 flags hashpspool stripe_width 0 target_size_ratio 0.49 application cephfs read_balance_score 1.13
+max_osd 3
+osd.0 up   in  weight 1 up_from 14 up_thru 84 down_at 0 last_clean_interval [0,0) [v2:10.10.63.84:6800/750382683,v1:10.10.63.84:6801/750382683] [v2:10.10.63.84:6802/750382683,v1:10.10.63.84:6803/750382683] exists,up 92e338a4-73ee-4a0d-8289-bbcec4e13ea7
+osd.1 up   in  weight 1 up_from 15 up_thru 82 down_at 0 last_clean_interval [0,0) [v2:10.10.63.85:6800/1887567045,v1:10.10.63.85:6801/1887567045] [v2:10.10.63.85:6802/1887567045,v1:10.10.63.85:6803/1887567045] exists,up c0ac1db0-d7f0-4f35-8ae7-3fdc74417e27
+osd.2 up   in  weight 1 up_from 15 up_thru 72 down_at 0 last_clean_interval [0,0) [v2:10.10.63.86:6800/2464663480,v1:10.10.63.86:6801/2464663480] [v2:10.10.63.86:6802/2464663480,v1:10.10.63.86:6803/2464663480] exists,up 53cf5316-7174-44d5-bb45-89dd9eb0f065
+blocklist 10.125.0.107:0/882631009 expires 2024-12-05T15:56:34.096662+0000
+blocklist 10.125.0.107:0/1262610252 expires 2024-12-05T15:56:34.096662+0000
+blocklist 10.125.0.107:6801/1324413198 expires 2024-12-05T15:56:34.096662+0000
+blocklist 10.125.0.107:0/1942745161 expires 2024-12-05T15:56:34.096662+0000
+blocklist 10.125.0.107:6800/1324413198 expires 2024-12-05T15:56:34.096662+0000
+sh-5.1$ exit
+exit
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+Check Storage Pods are using cpuset from isolated core map Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc get pods -n openshift-storage -o wide | grep master| grep -v Completed | awk '{print $1}' | xargs -I{} sh -c 'echo -n {} \| ; oc exec {} -n openshift-storage -- cat /sys/fs/cgroup/cpuset/cpuset.cpus 2>/dev/null'
+csi-addons-controller-manager-5456d75867-nbttb |3-27,30-55,59-83,86-111
+csi-cephfsplugin-7bgfr |3-27,30-55,59-83,86-111
+csi-cephfsplugin-dgp4s |3-27,30-55,59-83,86-111
+csi-cephfsplugin-holder-ocs-storagecluster-cephcluster-9ss9w |3-27,30-55,59-83,86-111
+csi-cephfsplugin-holder-ocs-storagecluster-cephcluster-bdgfw |3-27,30-55,59-83,86-111
+csi-cephfsplugin-holder-ocs-storagecluster-cephcluster-lwjmz |3-27,30-55,59-83,86-111
+csi-cephfsplugin-provisioner-557669668d-8rm8d |3-27,30-55,59-83,86-111
+csi-cephfsplugin-provisioner-557669668d-bblgx |3-27,30-55,59-83,86-111
+csi-cephfsplugin-t9qvc |3-27,30-55,59-83,86-111
+csi-rbdplugin-9x6sh |3-27,30-55,59-83,86-111
+csi-rbdplugin-bg4x8 |3-27,30-55,59-83,86-111
+csi-rbdplugin-holder-ocs-storagecluster-cephcluster-b8j4d |3-27,30-55,59-83,86-111
+csi-rbdplugin-holder-ocs-storagecluster-cephcluster-lvscl |3-27,30-55,59-83,86-111
+csi-rbdplugin-holder-ocs-storagecluster-cephcluster-qkwt4 |3-27,30-55,59-83,86-111
+csi-rbdplugin-provisioner-764675bbf9-4t8fs |3-27,30-55,59-83,86-111
+csi-rbdplugin-provisioner-764675bbf9-gfpkt |3-27,30-55,59-83,86-111
+csi-rbdplugin-sjw5r |3-27,30-55,59-83,86-111
+noobaa-core-0 |3-27,30-55,59-83,86-111
+noobaa-db-pg-0 |3-27,30-55,59-83,86-111
+noobaa-endpoint-7f4775d5d8-ccnst |3-27,30-55,59-83,86-111
+noobaa-operator-66b8947749-9ccf6 |3-27,30-55,59-83,86-111
+ocs-metrics-exporter-7c4666d88b-vmqcg |3-27,30-55,59-83,86-111
+ocs-operator-c78db4b95-v5gj8 |3-27,30-55,59-83,86-111
+odf-console-558578c85f-jrdsk |3-27,30-55,59-83,86-111
+odf-operator-controller-manager-b6b9cd7c6-n9dhr |3-27,30-55,59-83,86-111
+rook-ceph-crashcollector-master1.lab4.srib-lab-ocp.lan-757zzqs2 |3-27,30-55,59-83,86-111
+rook-ceph-crashcollector-master2.lab4.srib-lab-ocp.lan-c55mf4xn |3-27,30-55,59-83,86-111
+rook-ceph-crashcollector-master3.lab4.srib-lab-ocp.lan-78dgvlgk |3-27,30-55,59-83,86-111
+rook-ceph-exporter-master1.lab4.srib-lab-ocp.lan-664f79f86npntl |3-27,30-55,59-83,86-111
+rook-ceph-exporter-master2.lab4.srib-lab-ocp.lan-8686fbb66nrtvq |3-27,30-55,59-83,86-111
+rook-ceph-exporter-master3.lab4.srib-lab-ocp.lan-6787cdcbcxxfzs |3-27,30-55,59-83,86-111
+rook-ceph-mds-ocs-storagecluster-cephfilesystem-a-7f5d79bcrtxv6 |3-27,30-55,59-83,86-111
+rook-ceph-mds-ocs-storagecluster-cephfilesystem-b-59ddf676b5wwk |3-27,30-55,59-83,86-111
+rook-ceph-mgr-a-67f6c5b697-d9f6w |3-27,30-55,59-83,86-111
+rook-ceph-mon-a-849f554676-8xr4h |3-27,30-55,59-83,86-111
+rook-ceph-mon-b-75bd4d4fb7-mf2qf |3-27,30-55,59-83,86-111
+rook-ceph-mon-c-5b7b79d679-2d96d |3-27,30-55,59-83,86-111
+rook-ceph-operator-6c9b8847dd-v2lml |3-27,30-55,59-83,86-111
+rook-ceph-osd-0-6559894c46-crbqd |3-27,30-55,59-83,86-111
+rook-ceph-osd-1-5c464c56c9-mg6fx |3-27,30-55,59-83,86-111
+rook-ceph-osd-2-5874864c64-cthhf |3-27,30-55,59-83,86-111
+rook-ceph-rgw-ocs-storagecluster-cephobjectstore-a-855dbff88jd4 |3-27,30-55,59-83,86-111
+ux-backend-server-9f7bb5c66-2dlbc |3-27,30-55,59-83,86-111
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+Check Multus Network Setting Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc get storagecluster ocs-storagecluster -n openshift-storage -o=jsonpath='{.spec.network}{"\n"}'
+{"multiClusterService":{},"provider":"multus","selectors":{"public":"ocs-public-cluster"}}
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+Check if ocs-public-cluster nad is added to OSD pods Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc get -n openshift-storage $(oc get pods -n openshift-storage -o name -l app=rook-ceph-osd | grep 'osd-1') -o=jsonpath='{.metadata.annotations.k8s\.v1\.cni\.cncf\.io/network-status}{"\n"}'
+[{
+    "name": "ovn-kubernetes",
+    "interface": "eth0",
+    "ips": [
+        "10.125.0.111",
+        "fd03:0:0:2::6f"
+    ],
+    "mac": "0a:58:0a:7d:00:6f",
+    "default": true,
+    "dns": {}
+},{
+    "name": "openshift-storage/ocs-public-cluster",
+    "interface": "net1",
+    "ips": [
+        "10.10.63.85"
+    ],
+    "mac": "02:ea:cf:e0:27:c2",
+    "dns": {}
+}]
+srib@ocp-haproxy-4:~/ocp-config$ oc get -n openshift-storage $(oc get pods -n openshift-storage -o name -l app=rook-ceph-osd | grep 'osd-0') -o=jsonpath='{.metadata.annotations.k8s\.v1\.cni\.cncf\.io/network-status}{"\n"}'
+[{
+    "name": "ovn-kubernetes",
+    "interface": "eth0",
+    "ips": [
+        "10.124.0.119",
+        "fd03:0:0:1::77"
+    ],
+    "mac": "0a:58:0a:7c:00:77",
+    "default": true,
+    "dns": {}
+},{
+    "name": "openshift-storage/ocs-public-cluster",
+    "interface": "net1",
+    "ips": [
+        "10.10.63.84"
+    ],
+    "mac": "d6:0d:62:42:3b:6a",
+    "dns": {}
+}]
+srib@ocp-haproxy-4:~/ocp-config$ oc get -n openshift-storage $(oc get pods -n openshift-storage -o name -l app=rook-ceph-osd | grep 'osd-2') -o=jsonpath='{.metadata.annotations.k8s\.v1\.cni\.cncf\.io/network-status}{"\n"}'
+[{
+    "name": "ovn-kubernetes",
+    "interface": "eth0",
+    "ips": [
+        "10.126.0.151",
+        "fd03:0:0:3::97"
+    ],
+    "mac": "0a:58:0a:7e:00:97",
+    "default": true,
+    "dns": {}
+},{
+    "name": "openshift-storage/ocs-public-cluster",
+    "interface": "net1",
+    "ips": [
+        "10.10.63.86"
+    ],
+    "mac": "6a:86:44:c4:ef:bf",
+    "dns": {}
+}]
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+Check if ocs-public-cluster nad is added to cephfsplugin pods Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc get -n openshift-storage $(oc get pods -n openshift-storage -o name -l app=csi-cephfsplugin | grep 7b) -o=jsonpath='{.metadata.annotations.k8s\.v1\.cni\.cncf\.io/network-status}{"\n"}'
+[{
+    "name": "ovn-kubernetes",
+    "interface": "eth0",
+    "ips": [
+        "10.124.0.113",
+        "fd03:0:0:1::71"
+    ],
+    "mac": "0a:58:0a:7c:00:71",
+    "default": true,
+    "dns": {}
+},{
+    "name": "openshift-storage/ocs-public-cluster",
+    "interface": "net1",
+    "ips": [
+        "10.10.63.78"
+    ],
+    "mac": "de:7a:69:e9:f6:56",
+    "dns": {}
+}]
+srib@ocp-haproxy-4:~/ocp-config$ oc get -n openshift-storage $(oc get pods -n openshift-storage -o name -l app=csi-cephfsplugin | grep dg) -o=jsonpath='{.metadata.annotations.k8s\.v1\.cni\.cncf\.io/network-status}{"\n"}'
+[{
+    "name": "ovn-kubernetes",
+    "interface": "eth0",
+    "ips": [
+        "10.126.0.145",
+        "fd03:0:0:3::91"
+    ],
+    "mac": "0a:58:0a:7e:00:91",
+    "default": true,
+    "dns": {}
+},{
+    "name": "openshift-storage/ocs-public-cluster",
+    "interface": "net1",
+    "ips": [
+        "10.10.63.76"
+    ],
+    "mac": "6e:33:0e:c0:e5:74",
+    "dns": {}
+}]
+srib@ocp-haproxy-4:~/ocp-config$ oc get -n openshift-storage $(oc get pods -n openshift-storage -o name -l app=csi-cephfsplugin | grep t9) -o=jsonpath='{.metadata.annotations.k8s\.v1\.cni\.cncf\.io/network-status}{"\n"}'
+[{
+    "name": "ovn-kubernetes",
+    "interface": "eth0",
+    "ips": [
+        "10.125.0.103",
+        "fd03:0:0:2::67"
+    ],
+    "mac": "0a:58:0a:7d:00:67",
+    "default": true,
+    "dns": {}
+},{
+    "name": "openshift-storage/ocs-public-cluster",
+    "interface": "net1",
+    "ips": [
+        "10.10.63.68"
+    ],
+    "mac": "3a:68:56:a2:54:f9",
+    "dns": {}
+}]
+srib@ocp-haproxy-4:~/ocp-config$
