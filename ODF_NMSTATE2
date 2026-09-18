@@ -1,0 +1,619 @@
+Apply nmstate-bond1-policy-master.yaml
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc apply -f nncp-odf-master1.yaml
+nodenetworkconfigurationpolicy.nmstate.io/odf-pub-shim-master1 created
+
+srib@ocp-haproxy-4:~/ocp-config$ oc apply -f nncp-odf-master2.yaml
+nodenetworkconfigurationpolicy.nmstate.io/odf-pub-shim-master2 created
+
+srib@ocp-haproxy-4:~/ocp-config$ oc apply -f nncp-odf-master3.yaml
+nodenetworkconfigurationpolicy.nmstate.io/odf-pub-shim-master3 created
+
+
+Verify Master Bond1 Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-configMNO$ oc get nncp
+NAME                   STATUS      REASON
+odf-pub-shim-master1   Available   SuccessfullyConfigured
+odf-pub-shim-master2   Available   SuccessfullyConfigured
+odf-pub-shim-master3   Available   SuccessfullyConfigured
+
+
+srib@ocp-haproxy-4:~/ocp-configMNO$ oc get nnce
+NAME                                                 STATUS      STATUS AGE   REASON
+master1.lab4.srib-lab-ocp.lan.odf-pub-shim-master1   Available   6d20h        SuccessfullyConfigured
+master2.lab4.srib-lab-ocp.lan.odf-pub-shim-master2   Available   6d20h        SuccessfullyConfigured
+master3.lab4.srib-lab-ocp.lan.odf-pub-shim-master3   Available   6d20h        SuccessfullyConfigured
+srib@ocp-haproxy-4:~/ocp-configMNO$
+4.5.5. Create Local Storage Operator
+openshift-local-storage.yaml Collapse source
+
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-local-storage
+  annotations:
+    workload.openshift.io/allowed: management
+spec: {}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: local-operator-group
+  namespace: openshift-local-storage
+spec:
+  targetNamespaces:
+  - openshift-local-storage
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: local-storage-operator
+  namespace: openshift-local-storage
+spec:
+  channel: "stable"                                            # <--- Get value from above step
+  installPlanApproval: Automatic
+  name: local-storage-operator
+  source: cs-redhat-operator-index                             # <--- Get value from above step
+  sourceNamespace: openshift-marketplace                       # <--- Get value from above step
+Apply Local Storage Operators
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc apply -f openshift-local-storage.yaml
+namespace/openshift-local-storage created
+operatorgroup.operators.coreos.com/local-operator-group created
+subscription.operators.coreos.com/local-storage-operator created
+srib@ocp-haproxy-4:~/ocp-config$
+Verify Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-configMNO$ oc get sub -n openshift-local-storage
+NAME                     PACKAGE                  SOURCE                           CHANNEL
+local-storage-operator   local-storage-operator   cs-redhat-operator-index-v4-18   stable
+srib@ocp-haproxy-4:~/ocp-configMNO$
+
+srib@ocp-haproxy-4:~/ocp-configMNO$ oc get csv -n openshift-local-storage
+NAME                                          DISPLAY         VERSION               REPLACES   PHASE
+local-storage-operator.v4.18.0-202509240837   Local Storage   4.18.0-202509240837              Succeeded
+4.5.6. Local discovery and disk maker:
+Label Nodes
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc get nodes
+NAME                            STATUS   ROLES                         AGE   VERSION
+master1.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   23h   v1.27.16+03a907c
+master2.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   23h   v1.27.16+03a907c
+master3.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   23h   v1.27.16+03a907c
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$ oc label node master1.lab4.srib-lab-ocp.lan cluster.ocs.openshift.io/openshift-storage=''
+node/master1.lab4.srib-lab-ocp.lan labeled
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$ oc label node master2.lab4.srib-lab-ocp.lan cluster.ocs.openshift.io/openshift-storage=''
+node/master2.lab4.srib-lab-ocp.lan labeled
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$ oc label node master3.lab4.srib-lab-ocp.lan cluster.ocs.openshift.io/openshift-storage=''
+node/master3.lab4.srib-lab-ocp.lan labeled
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$ oc get nodes --show-labels
+NAME                            STATUS   ROLES                         AGE   VERSION            LABELS
+master1.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   23h   v1.27.16+03a907c   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,cluster.ocs.openshift.io/openshift-storage=,feature.node.kubernetes.io/network-sriov.capable=true,kubernetes.io/arch=amd64,kubernetes.io/hostname=master1.lab4.srib-lab-ocp.lan,kubernetes.io/os=linux,node-role.kubernetes.io/control-plane=,node-role.kubernetes.io/master=,node-role.kubernetes.io/worker=,node.openshift.io/os_id=rhcos
+master2.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   23h   v1.27.16+03a907c   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,cluster.ocs.openshift.io/openshift-storage=,feature.node.kubernetes.io/network-sriov.capable=true,kubernetes.io/arch=amd64,kubernetes.io/hostname=master2.lab4.srib-lab-ocp.lan,kubernetes.io/os=linux,node-role.kubernetes.io/control-plane=,node-role.kubernetes.io/master=,node-role.kubernetes.io/worker=,node.openshift.io/os_id=rhcos
+master3.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   23h   v1.27.16+03a907c   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,cluster.ocs.openshift.io/openshift-storage=,feature.node.kubernetes.io/network-sriov.capable=true,kubernetes.io/arch=amd64,kubernetes.io/hostname=master3.lab4.srib-lab-ocp.lan,kubernetes.io/os=linux,node-role.kubernetes.io/control-plane=,node-role.kubernetes.io/master=,node-role.kubernetes.io/worker=,node.openshift.io/os_id=rhcos
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+local-volume-discovery.yaml Collapse source
+
+
+apiVersion: local.storage.openshift.io/v1alpha1
+kind: LocalVolumeDiscovery
+metadata:
+ name: auto-discover-devices
+ namespace: openshift-local-storage
+spec:
+ nodeSelector:
+   nodeSelectorTerms:
+     - matchExpressions:
+       - key: cluster.ocs.openshift.io/openshift-storage
+         operator: In
+         values:
+           - ""
+Apply Local Volume Discovery
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc apply -f local-volume-discovery.yaml
+localvolumediscovery.local.storage.openshift.io/auto-discover-devices created
+srib@ocp-haproxy-4:~/ocp-config$
+Verify Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-configMNO$ oc get localvolumediscoveryresults  -n openshift-local-storage
+NAME                                             AGE
+discovery-result-master1.lab4.srib-lab-ocp.lan   18s
+discovery-result-master2.lab4.srib-lab-ocp.lan   19s
+discovery-result-master3.lab4.srib-lab-ocp.lan   19s
+
+
+
+# check if volumes are being discovered
+
+srib@ocp-haproxy-4:~/ocp-configMNO$ oc describe localvolumediscoveryresults -n openshift-local-storage discovery-result-master1.lab4.srib-lab-ocp.lan
+Name:         discovery-result-master1.lab4.srib-lab-ocp.lan
+Namespace:    openshift-local-storage
+Labels:       discovery-result-node=master1.lab4.srib-lab-ocp.lan
+Annotations:  <none>
+API Version:  local.storage.openshift.io/v1alpha1
+Kind:         LocalVolumeDiscoveryResult
+Metadata:
+  Creation Timestamp:  2025-10-10T11:49:13Z
+  Generation:          1
+  Owner References:
+    API Version:     local.storage.openshift.io/v1alpha1
+    Kind:            LocalVolumeDiscovery
+    Name:            auto-discover-devices
+    UID:             688b4c38-5488-41b1-a26f-7c8ed20b7a00
+  Resource Version:  379804
+  UID:               739c8ed5-3856-40ae-92ff-78294fa55988
+Spec:
+  Node Name:  master1.lab4.srib-lab-ocp.lan
+Status:
+  Discovered Devices:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e6f-part1
+    Fstype:
+    Model:
+    Path:       /dev/sda1
+    Property:   NonRotational
+    Serial:
+    Size:       1048576
+    Status:
+      State:    NotAvailable
+    Type:       part
+    Vendor:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e6f-part2
+    Fstype:     vfat
+    Model:
+    Path:       /dev/sda2
+    Property:   NonRotational
+    Serial:
+    Size:       133169152
+    Status:
+      State:    NotAvailable
+    Type:       part
+    Vendor:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e6f-part3
+    Fstype:     ext4
+    Model:
+    Path:       /dev/sda3
+    Property:   NonRotational
+    Serial:
+    Size:       402653184
+    Status:
+      State:    NotAvailable
+    Type:       part
+    Vendor:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e6f-part4
+    Fstype:     xfs
+    Model:
+    Path:       /dev/sda4
+    Property:   NonRotational
+    Serial:
+    Size:       1919845470208
+    Status:
+      State:    NotAvailable
+    Type:       part
+    Vendor:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e7a
+    Fstype:
+    Model:      VK001920GZCNH
+    Path:       /dev/sdb
+    Property:   NonRotational
+    Serial:     KDD1N6037I1902224
+    Size:       1920383410176
+    Status:
+      State:              Available
+    Type:                 disk
+    Vendor:               ATA
+  Discovered Time Stamp:  2025-10-10T11:49:13Z
+Events:                   <none>
+srib@ocp-haproxy-4:~/ocp-configMNO$
+srib@ocp-haproxy-4:~/ocp-configMNO$ oc describe localvolumediscoveryresults -n openshift-local-storage discovery-result-master2.lab4.srib-lab-ocp.lan
+Name:         discovery-result-master2.lab4.srib-lab-ocp.lan
+Namespace:    openshift-local-storage
+Labels:       discovery-result-node=master2.lab4.srib-lab-ocp.lan
+Annotations:  <none>
+API Version:  local.storage.openshift.io/v1alpha1
+Kind:         LocalVolumeDiscoveryResult
+Metadata:
+  Creation Timestamp:  2025-10-10T11:49:12Z
+  Generation:          1
+  Owner References:
+    API Version:     local.storage.openshift.io/v1alpha1
+    Kind:            LocalVolumeDiscovery
+    Name:            auto-discover-devices
+    UID:             688b4c38-5488-41b1-a26f-7c8ed20b7a00
+  Resource Version:  379786
+  UID:               4160d637-2786-4e4d-b3f0-b4769deb6a52
+Spec:
+  Node Name:  master2.lab4.srib-lab-ocp.lan
+Status:
+  Discovered Devices:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e74-part1
+    Fstype:
+    Model:
+    Path:       /dev/sda1
+    Property:   NonRotational
+    Serial:
+    Size:       1048576
+    Status:
+      State:    NotAvailable
+    Type:       part
+    Vendor:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e74-part2
+    Fstype:     vfat
+    Model:
+    Path:       /dev/sda2
+    Property:   NonRotational
+    Serial:
+    Size:       133169152
+    Status:
+      State:    NotAvailable
+    Type:       part
+    Vendor:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e74-part3
+    Fstype:     ext4
+    Model:
+    Path:       /dev/sda3
+    Property:   NonRotational
+    Serial:
+    Size:       402653184
+    Status:
+      State:    NotAvailable
+    Type:       part
+    Vendor:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e74-part4
+    Fstype:     xfs
+    Model:
+    Path:       /dev/sda4
+    Property:   NonRotational
+    Serial:
+    Size:       1919845470208
+    Status:
+      State:    NotAvailable
+    Type:       part
+    Vendor:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e78
+    Fstype:
+    Model:      VK001920GZCNH
+    Path:       /dev/sdb
+    Property:   NonRotational
+    Serial:     KDD1N6037I1902222
+    Size:       1920383410176
+    Status:
+      State:              Available
+    Type:                 disk
+    Vendor:               ATA
+  Discovered Time Stamp:  2025-10-10T11:49:12Z
+Events:                   <none>
+srib@ocp-haproxy-4:~/ocp-configMNO$
+srib@ocp-haproxy-4:~/ocp-configMNO$
+srib@ocp-haproxy-4:~/ocp-configMNO$ oc describe localvolumediscoveryresults -n openshift-local-storage discovery-result-master3.lab4.srib-lab-ocp.lan
+Name:         discovery-result-master3.lab4.srib-lab-ocp.lan
+Namespace:    openshift-local-storage
+Labels:       discovery-result-node=master3.lab4.srib-lab-ocp.lan
+Annotations:  <none>
+API Version:  local.storage.openshift.io/v1alpha1
+Kind:         LocalVolumeDiscoveryResult
+Metadata:
+  Creation Timestamp:  2025-10-10T11:49:12Z
+  Generation:          1
+  Owner References:
+    API Version:     local.storage.openshift.io/v1alpha1
+    Kind:            LocalVolumeDiscovery
+    Name:            auto-discover-devices
+    UID:             688b4c38-5488-41b1-a26f-7c8ed20b7a00
+  Resource Version:  379769
+  UID:               843e8fc4-95fd-4eb7-a812-75de931db27c
+Spec:
+  Node Name:  master3.lab4.srib-lab-ocp.lan
+Status:
+  Discovered Devices:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e72-part1
+    Fstype:
+    Model:
+    Path:       /dev/sda1
+    Property:   NonRotational
+    Serial:
+    Size:       1048576
+    Status:
+      State:    NotAvailable
+    Type:       part
+    Vendor:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e72-part2
+    Fstype:     vfat
+    Model:
+    Path:       /dev/sda2
+    Property:   NonRotational
+    Serial:
+    Size:       133169152
+    Status:
+      State:    NotAvailable
+    Type:       part
+    Vendor:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e72-part3
+    Fstype:     ext4
+    Model:
+    Path:       /dev/sda3
+    Property:   NonRotational
+    Serial:
+    Size:       402653184
+    Status:
+      State:    NotAvailable
+    Type:       part
+    Vendor:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e72-part4
+    Fstype:     xfs
+    Model:
+    Path:       /dev/sda4
+    Property:   NonRotational
+    Serial:
+    Size:       1919845470208
+    Status:
+      State:    NotAvailable
+    Type:       part
+    Vendor:
+    Device ID:  /dev/disk/by-id/wwn-0x5ace42e425001e7c
+    Fstype:
+    Model:      VK001920GZCNH
+    Path:       /dev/sdb
+    Property:   NonRotational
+    Serial:     KDD1N6037I1902226
+    Size:       1920383410176
+    Status:
+      State:              Available
+    Type:                 disk
+    Vendor:               ATA
+  Discovered Time Stamp:  2025-10-10T11:49:12Z
+Events:                   <none>
+srib@ocp-haproxy-4:~/ocp-configMNO$
+
+
+localvolumeset.yaml Collapse source
+
+
+apiVersion: local.storage.openshift.io/v1alpha1
+kind: LocalVolumeSet
+metadata:
+ name: local-block
+ namespace: openshift-local-storage
+spec:
+ nodeSelector:
+   nodeSelectorTerms:
+     - matchExpressions:
+         - key: cluster.ocs.openshift.io/openshift-storage
+           operator: In
+           values:
+             - ""
+ storageClassName: localblock
+ volumeMode: Block
+ fstype: ext4
+ maxDeviceCount: 1
+ deviceInclusionSpec:
+   deviceTypes:
+   - disk
+   deviceMechanicalProperties:
+   - NonRotational
+   minSize: "1Ti"
+Apply Local Volume Set
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc create -f localvolumeset.yaml
+localvolumeset.local.storage.openshift.io/local-block created
+srib@ocp-haproxy-4:~/ocp-config$
+Verify Collapse source
+
+
+# 3 locla volume PVs must come up 
+srib@ocp-haproxy-4:~/ocp-configMNO$ oc get pv
+NAME                CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+local-pv-1d0efbc8   1788Gi     RWO            Delete           Available           localblock     <unset>                          68s
+local-pv-6d780700   1788Gi     RWO            Delete           Available           localblock     <unset>                          69s
+local-pv-ce3181ac   1788Gi     RWO            Delete           Available           localblock     <unset>                          69s
+srib@ocp-haproxy-4:~/ocp-configMNO$
+srib@ocp-haproxy-4:~/ocp-configMNO$
+srib@ocp-haproxy-4:~/ocp-configMNO$
+srib@ocp-haproxy-4:~/ocp-configMNO$ oc get pods -n openshift-local-storage -o wide | grep "diskmaker-manager"
+diskmaker-manager-2gbqj                   2/2     Running   0          2m18s   10.129.0.80    master3.lab4.srib-lab-ocp.lan   <none>           <none>
+diskmaker-manager-4m6fz                   2/2     Running   0          2m18s   10.128.0.111   master2.lab4.srib-lab-ocp.lan   <none>           <none>
+diskmaker-manager-xkvml                   2/2     Running   0          2m18s   10.130.0.73    master1.lab4.srib-lab-ocp.lan   <none>           <none>
+srib@ocp-haproxy-4:~/ocp-configMNO$
+
+4.5.7. Install ODF Operator
+
+
+ocs-odf-operator.yaml Collapse source
+
+
+apiVersion: v1
+kind: Namespace
+metadata:
+ labels:
+   openshift.io/cluster-monitoring: "true"
+ name: openshift-storage
+ annotations:
+   workload.openshift.io/allowed: management
+spec: {}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+ name: openshift-storage-operatorgroup
+ namespace: openshift-storage
+spec:
+ targetNamespaces:
+ - openshift-storage
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+ name: odf-operator
+ namespace: openshift-storage
+spec:
+ channel: "stable-4.18"
+ installPlanApproval: Automatic
+ name: odf-operator
+ source: cs-redhat-operator-index-v4-18
+ sourceNamespace: openshift-marketplace
+Apply OCS ODF Operator
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc apply -f odf-operator.yaml
+namespace/openshift-storage created
+operatorgroup.operators.coreos.com/openshift-storage-operatorgroup created
+subscription.operators.coreos.com/odf-operator created
+srib@ocp-haproxy-4:~/ocp-config$
+Verify Collapse source
+
+
+#make sure to have all the dependent operators downloaded in your local image repo
+
+srib@ocp-haproxy-4:~/ocp-configMNO$ oc get sub -n openshift-storage
+NAME                                                                                       PACKAGE                   SOURCE                           CHANNEL
+cephcsi-operator-stable-4.18-cs-redhat-operator-index-v4-18-openshift-marketplace          cephcsi-operator          cs-redhat-operator-index-v4-18   stable-4.18
+mcg-operator-stable-4.18-cs-redhat-operator-index-v4-18-openshift-marketplace              mcg-operator              cs-redhat-operator-index-v4-18   stable-4.18
+ocs-client-operator-stable-4.18-cs-redhat-operator-index-v4-18-openshift-marketplace       ocs-client-operator       cs-redhat-operator-index-v4-18   stable-4.18
+ocs-operator-stable-4.18-cs-redhat-operator-index-v4-18-openshift-marketplace              ocs-operator              cs-redhat-operator-index-v4-18   stable-4.18
+odf-csi-addons-operator-stable-4.18-cs-redhat-operator-index-v4-18-openshift-marketplace   odf-csi-addons-operator   cs-redhat-operator-index-v4-18   stable-4.18
+odf-dependencies                                                                           odf-dependencies          cs-redhat-operator-index-v4-18   stable-4.18
+odf-operator                                                                               odf-operator              cs-redhat-operator-index-v4-18   stable-4.18
+odf-prometheus-operator-stable-4.18-cs-redhat-operator-index-v4-18-openshift-marketplace   odf-prometheus-operator   cs-redhat-operator-index-v4-18   stable-4.18
+recipe-stable-4.18-cs-redhat-operator-index-v4-18-openshift-marketplace                    recipe                    cs-redhat-operator-index-v4-18   stable-4.18
+rook-ceph-operator-stable-4.18-cs-redhat-operator-index-v4-18-openshift-marketplace        rook-ceph-operator        cs-redhat-operator-index-v4-18   stable-4.18
+srib@ocp-haproxy-4:~/ocp-configMNO$
+srib@ocp-haproxy-4:~/ocp-configMNO$ oc get csv -n openshift-storage
+NAME                                     DISPLAY                            VERSION         REPLACES                                 PHASE
+cephcsi-operator.v4.18.11-rhodf          CephCSI operator                   4.18.11-rhodf   cephcsi-operator.v4.18.10-rhodf          Succeeded
+mcg-operator.v4.18.11-rhodf              NooBaa Operator                    4.18.11-rhodf   mcg-operator.v4.18.10-rhodf              Succeeded
+ocs-client-operator.v4.18.11-rhodf       OpenShift Data Foundation Client   4.18.11-rhodf   ocs-client-operator.v4.18.10-rhodf       Succeeded
+ocs-operator.v4.18.11-rhodf              OpenShift Container Storage        4.18.11-rhodf   ocs-operator.v4.18.10-rhodf              Succeeded
+odf-csi-addons-operator.v4.18.11-rhodf   CSI Addons                         4.18.11-rhodf   odf-csi-addons-operator.v4.18.10-rhodf   Succeeded
+odf-dependencies.v4.18.11-rhodf          Data Foundation Dependencies       4.18.11-rhodf   odf-dependencies.v4.18.10-rhodf          Succeeded
+odf-operator.v4.18.11-rhodf              OpenShift Data Foundation          4.18.11-rhodf   odf-operator.v4.18.10-rhodf              Succeeded
+odf-prometheus-operator.v4.18.11-rhodf   Prometheus Operator                4.18.11-rhodf   odf-prometheus-operator.v4.18.10-rhodf   Succeeded
+recipe.v4.18.11-rhodf                    Recipe                             4.18.11-rhodf   recipe.v4.18.10-rhodf                    Succeeded
+rook-ceph-operator.v4.18.11-rhodf        Rook-Ceph                          4.18.11-rhodf   rook-ceph-operator.v4.18.10-rhodf        Succeeded
+srib@ocp-haproxy-4:~/ocp-configMNO$
+srib@ocp-haproxy-4:~/ocp-configMNO$
+srib@ocp-haproxy-4:~/ocp-configMNO$
+srib@ocp-haproxy-4:~/ocp-configMNO$ oc get pods -n openshift-storage
+NAME                                               READY   STATUS    RESTARTS   AGE
+ceph-csi-controller-manager-56987cb984-q59mb       2/2     Running   0          3m5s
+csi-addons-controller-manager-56f574f94b-gmvsc     2/2     Running   0          3m16s
+noobaa-operator-6fb787ddb7-snn22                   1/1     Running   0          2m41s
+ocs-operator-57b49f8fcf-5gnst                      1/1     Running   0          2m47s
+odf-console-55d645d48-wfx7z                        1/1     Running   0          3m49s
+odf-operator-controller-manager-858cd578d9-8zmmd   2/2     Running   0          3m49s
+rook-ceph-operator-fbf5c458-c5rcx                  1/1     Running   0          2m38s
+ux-backend-server-65b69b95d4-7mqdl                 2/2     Running   0          2m47s
+srib@ocp-haproxy-4:~/ocp-configMNO$
+
+
+
+
+4.5.8. Create Separate Public Cluster Network NAD for storage:
+logic is to create a NAD for MULTUS network on top of the interface (might be single IF, bond or VLAN) which was created for MACVLAN in the above NNCP policies.
+
+
+
+ocs-public-cluster-with-pub-shim.yaml
+
+
+# single interface
+
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: ocs-public-cluster
+  namespace: openshift-storage
+spec:
+  config: '{
+    "cniVersion": "0.3.1",
+    "type": "macvlan",
+    "master": "ens4f1",
+    "mode": "bridge",
+    "ipam": {
+      "type": "whereabouts",
+      "range": "10.200.63.0/24",
+      "exclude": [
+         "10.200.63.2/32",   # add all the static IPs of nodes, previously added in NNCP configurations
+         "10.200.63.3/32",
+         "10.200.63.4/32"
+      ],
+      "routes": [
+         {"dst": "10.200.63.0/24"}
+      ]
+    }
+  }'
+
+//////////////////////////////////////////////////////
+
+# bond interface 
+
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: ocs-public-cluster
+  namespace: openshift-storage
+spec:
+  config: '{
+    "cniVersion": "0.3.1",
+    "type": "macvlan",
+    "master": "bond1",
+    "mode": "bridge",
+    "ipam": {
+      "type": "whereabouts",
+      "range": "20.1.15.0/24",
+      "exclude": [
+         "20.1.15.102/32",
+         "20.1.15.103/32",
+         "20.1.15.104/32",
+         "20.1.15.105/32",
+         "20.1.15.106/32"
+      ],
+      "routes": [
+         {"dst": "20.1.15.0/24"}
+      ]
+    }
+  }'
+Apply storage cluster NAD
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc apply -f ocs-public-cluster.yaml
+networkattachmentdefinition.k8s.cni.cncf.io/ocs-public-cluster created
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$ oc get net-attach-def -A
+NAMESPACE           NAME                 AGE
+openshift-storage   ocs-public-cluster   8s
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+
+ssrib@ocp-haproxy-4:~/ocp-configMNO$ oc describe net-attach-def -n openshift-storage ocs-public-cluster
+Name:         ocs-public-cluster
+Namespace:    openshift-storage
+Labels:       <none>
+Annotations:  <none>
+API Version:  k8s.cni.cncf.io/v1
+Kind:         NetworkAttachmentDefinition
+Metadata:
+  Creation Timestamp:  2025-11-12T10:59:58Z
+  Generation:          1
+  Resource Version:    6091264
+  UID:                 d79bba32-9349-4b01-b04f-8fe6660d49cb
+Spec:
+  Config:  { "cniVersion": "0.3.1", "type": "macvlan", "master": "ens4f1", "mode": "bridge", "ipam": { "type": "whereabouts", "range": "10.200.63.0/24", "exclude": [ "10.200.63.2/32", "10.200.63.3/32", "10.200.63.4/32" ], "routes": [ {"dst": "10.200.63.0/24"} ] } }
+Events:    <none>
