@@ -1,0 +1,7 @@
+export LOCAL_REGISTRY="bastion.srib-lab-ocp.lan:8443"
+ 1037  export LOCAL_REPOSITORY="ocp4/openshift4"
+ 1038  oc mirror -c imageset-config_4_21_30.yaml  file:///root/mirror_4_21_30/ --v2 --parallel-images 20 --retry-times 10 --image-timeout 20m
+ 1039  oc mirror -c imageset-config_4_21_30.yaml  file:///root/mirror_4_21_30/ --v2
+
+
+oc mirror -c  imageset-config_4_21_30.yaml  --from file:///root/mirror_4_21_30/ docker://${LOCAL_REGISTRY}/${LOCAL_REPOSITORY} --v2
