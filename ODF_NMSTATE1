@@ -1,0 +1,658 @@
+Created by mono.ghosh Monosij Ghosh(Monosij Ghosh) # System S/W /SRI-Bangalore, last updated on Feb 25, 2026  24 minute read
+1. Important Note:
+
+
+IMPORTANT NOTE:
+
+Below Steps are for reference only.
+
+Users have to make changes based on their test environment.
+
+Kindly read the commands and output in detail and understand the basic intent.
+
+Avoid blind copy-pasting and running commands.
+
+1.1. References
+1.1.1. Multus configuration: https://docs.redhat.com/en/documentation/red_hat_openshift_data_foundation/4.18/html/planning_your_deployment/network-requirements_rhodf#multus-examples_rhodf
+1.1.2. OCS ODF multus networking: https://docs.redhat.com/en/documentation/red_hat_openshift_data_foundation/4.9/html/deploying_openshift_data_foundation_using_bare_metal_infrastructure/deploy-using-local-storage-devices-bm#creating-network-attachment-definitions_local-bare-metal
+1.1.3.  Ceph Networking: https://docs.ceph.com/en/reef/rados/configuration/network-config-ref/
+
+
+2. Overview:
+This page gives a reference as to how to set up the NM State operator and ODF operator properly with correct MULTUS configuration for OCP/ODF version 4.18.
+
+
+
+3.  check operator catalog source and channel names
+
+
+
+
+srib@ocp-haproxy-4:~$ array=("kubernetes-nmstate-operator" "local-storage-operator" "odf-operator" )
+for item in "${array[@]}"; do
+  echo "$item"
+  oc get packagemanifest -o json | jq '.items[] | select(.metadata.name=="'$item'") | .status | .channels[] | .name'
+  oc get packagemanifest -o json | jq '.items[] | select(.metadata.name=="'$item'") | .status | .catalogSource '
+  oc get packagemanifest -o json | jq '.items[] | select(.metadata.name=="'$item'") | .status |  .catalogSourceNamespace'
+done
+kubernetes-nmstate-operator
+"stable"
+"cs-redhat-operator-index-v4-18"
+"openshift-marketplace"
+local-storage-operator
+"stable"
+"cs-redhat-operator-index-v4-18"
+"openshift-marketplace"
+odf-operator
+"stable-4.18"
+"cs-redhat-operator-index-v4-18"
+"openshift-marketplace"
+4. ODF Operator for Storage:
+4.1. Create NMState Operator
+nmstate-operator.yaml Collapse source
+
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-nmstate
+  annotations:
+    workload.openshift.io/allowed: management
+spec:
+  finalizers:
+  - kubernetes
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-nmstate
+  namespace: openshift-nmstate
+spec:
+  targetNamespaces:
+  - openshift-nmstate
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: kubernetes-nmstate-operator
+  namespace: openshift-nmstate
+spec:
+  channel: stable                                     #<--- Get value from above step
+  installPlanApproval: Automatic
+  name: kubernetes-nmstate-operator
+  source: cs-redhat-operator-index                    #<--- Get value from above step
+  sourceNamespace: openshift-marketplace              #<--- Get value from above step
+Apply NMState Operators
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc apply -f nmstate-operator.yaml
+namespace/openshift-nmstate created
+operatorgroup.operators.coreos.com/openshift-nmstate created
+subscription.operators.coreos.com/kubernetes-nmstate-operator created
+srib@ocp-haproxy-4:~/ocp-config$
+Verify NMState Operators Collapse source
+
+
+srib@ocp-haproxy-4:~$ oc get sub -n openshift-nmstate
+NAME                          PACKAGE                       SOURCE                           CHANNEL
+kubernetes-nmstate-operator   kubernetes-nmstate-operator   cs-redhat-operator-index-v4-18   stable
+srib@ocp-haproxy-4:~$
+
+
+srib@ocp-haproxy-4:~$ oc get csv -n openshift-nmstate
+NAME                                              DISPLAY                       VERSION               REPLACES   PHASE
+kubernetes-nmstate-operator.4.18.0-202509241752   Kubernetes NMState Operator   4.18.0-202509241752              Succeeded
+4.2. Create NMState Object
+
+
+nmstate.yaml Collapse source
+
+
+apiVersion: nmstate.io/v1
+kind: NMState
+metadata:
+  name: nmstate
+Apply NMState Object
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc apply -f nmstate.yaml
+nmstate.nmstate.io/nmstate created
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+4.3. Check NMState Pods
+NMState Pods Collapse source
+
+
+srib@ocp-haproxy-4:~$ oc get pod -n openshift-nmstate -o wide
+NAME                                      READY   STATUS    RESTARTS   AGE   IP            NODE                            NOMINATED NODE   READINESS GATES
+nmstate-console-plugin-6b874cbd85-x77x8   1/1     Running   0          23d   10.129.0.50   master1.lab4.srib-lab-ocp.lan   <none>           <none>
+nmstate-handler-fpsl9                     1/1     Running   0          23d   71.1.1.5      master1.lab4.srib-lab-ocp.lan   <none>           <none>
+nmstate-handler-hnttc                     1/1     Running   0          23d   71.1.1.105    master2.lab4.srib-lab-ocp.lan   <none>           <none>
+nmstate-handler-hzsbh                     1/1     Running   0          23d   71.1.1.109    master3.lab4.srib-lab-ocp.lan   <none>           <none>
+nmstate-metrics-fdff9cb8d-cmlmw           2/2     Running   0          23d   10.129.0.48   master1.lab4.srib-lab-ocp.lan   <none>           <none>
+nmstate-operator-5b45b6cc6-r4jww          1/1     Running   0          23d   10.129.0.47   master1.lab4.srib-lab-ocp.lan   <none>           <none>
+nmstate-webhook-6cdbc54649-2hvvd          1/1     Running   0          23d   10.129.0.49   master1.lab4.srib-lab-ocp.lan   <none>           <none>
+srib@ocp-haproxy-4:~$
+4.4. Check NMState Node Configuration
+NMState Nodes Satte
+
+
+# might take to come up. Wait for sometime.
+
+srib@ocp-haproxy-4:~/ocp-config$ oc get nns
+NAME                            AGE
+master1.lab4.srib-lab-ocp.lan   31m
+master2.lab4.srib-lab-ocp.lan   31m
+master3.lab4.srib-lab-ocp.lan   31m
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+4.5. Apply NMSTATE NNCP policies
+REF : Chapter 8. Network requirements | Planning your deployment | Red Hat OpenShift Data Foundation | 4.18 | Red Hat Documentation
+
+the logic of having the NNCP policies is to have a MACVLAN interface on which MULTUS is configured for ODF. Now, the MACVLAN can be on top of a single interface or a bonded interface. Additionally, in VVT (Suwon) setups, there is a requirement of having a VLAN interface on top of bond/single interface. So, PLEASE check the network plan and requirements and proceed accordingly. The NNCP YAMLs for all type of configurations are provided below (these are examples, please choose the interface names and IPs correctly).
+
+
+
+The different configurations are as below :
+
+ single interface → MACVLAN
+ single interface → VLAN → MACVLAN
+ two interfaces → bond interface → MACVLAN
+ two interfaces → bond interface → VLAN → MACVLAN
+4.5.1.  create NNCP policies on a single interface (single interface → MACVLAN)
+create separate NNCP policies for master nodes
+
+
+# create separate NNCP policies for master nodes, on a single NW interface
+Redhat Guidelines:
+For static IP management, each node must have a different NodeNetworkConfigurationPolicy.
+Select separate nodes for each policy to configure static networks.
+A “shim” interface is used to connect hosts to the Multus public network using the same technology as the Network Attachment Definition will use.
+The host’s “shim” must be of the same type as planned for pods, macvlan here.
+The interface must match the Multus public network interface selected in planning, ens4f1 in this example.
+The ipv4 section configures node IP addresses on the Multus public network.
+IPs assigned to this node’s shim must match the plan. This example uses 110.200.63.0/22 for node IPs on the Multus public network.
+For static IP management, don’t forget to change the IP for each node.
+The routes section instructs nodes how to reach pods on the Multus public network.
+
+
+
+srib@ocp-haproxy-4:~/ocp-configMNO$ cat nncp-odf-master1.yaml
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: odf-pub-shim-master1 
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: master1.lab4.srib-lab-ocp.lan
+    node-role.kubernetes.io/master: ""
+  desiredState:
+    interfaces:
+      - name: odf-pub-shim         
+        description: "ODF public shim"
+        type: mac-vlan
+        state: up
+        mac-vlan:
+          base-iface: ens4f1
+          mode: bridge
+          promiscuous: true
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 10.200.63.2
+              prefix-length: 24
+    routes:
+      config:
+        - destination: 10.200.63.0/24
+          next-hop-interface: odf-pub-shim
+srib@ocp-haproxy-4:~/ocp-configMNO$
+srib@ocp-haproxy-4:~/ocp-configMNO$ cat nncp-odf-master2.yaml
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: odf-pub-shim-master2
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: master2.lab4.srib-lab-ocp.lan
+    node-role.kubernetes.io/master: ""
+  desiredState:
+    interfaces:
+      - name: odf-pub-shim
+        description: "ODF public shim"
+        type: mac-vlan
+        state: up
+        mac-vlan:
+          base-iface: ens4f1
+          mode: bridge
+          promiscuous: true
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 10.200.63.3
+              prefix-length: 24
+    routes:
+      config:
+        - destination: 10.200.63.0/24
+          next-hop-interface: odf-pub-shim
+srib@ocp-haproxy-4:~/ocp-configMNO$
+
+
+srib@ocp-haproxy-4:~/ocp-configMNO$ cat nncp-odf-master3.yaml
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: odf-pub-shim-master3
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: master3.lab4.srib-lab-ocp.lan
+    node-role.kubernetes.io/master: ""
+  desiredState:
+    interfaces:
+      - name: odf-pub-shim
+        description: "ODF public shim"
+        type: mac-vlan
+        state: up
+        mac-vlan:
+          base-iface: ens4f1
+          mode: bridge
+          promiscuous: true
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 10.200.63.4
+              prefix-length: 24
+    routes:
+      config:
+        - destination: 10.200.63.0/24
+          next-hop-interface: odf-pub-shim
+srib@ocp-haproxy-4:~/ocp-configMNO$
+4.5.2.  create NNCP policies on a single interface with VLAN (single interface → VLAN → MACVLAN)
+create separate NNCP policies for master nodes
+
+
+[root@bastion NMSTATE]# cat nncp-odf-worker1.yaml
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: odf-bond1-vlan-macvlan-worker1-policy
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: worker1.viairtel.samsungbsc.local
+  desiredState:
+    interfaces:
+      - name: bond1.215
+        description: "ODF VLAN 215 on bond1"
+        type: vlan
+        state: up
+        vlan:
+          base-iface: ens1f1
+          id: 215
+        ipv4:
+          enabled: false
+      - name: bond1-mvlan
+        description: "ODF mvlan on single IF 215"
+        type: mac-vlan
+        state: up
+        mac-vlan:
+          base-iface: bond1.215
+          mode: bridge
+          promiscuous: true
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 20.1.15.105
+            prefix-length: 24
+    routes:
+      config:
+      - destination: 20.1.15.0/24
+        next-hop-interface: bond1-mvlan
+[root@bastion NMSTATE]#
+[root@bastion NMSTATE]#
+[root@bastion NMSTATE]# cat nncp-odf-worker2.yaml
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: odf-bond1-vlan-macvlan-worker2-policy
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: worker2.viairtel.samsungbsc.local
+  desiredState:
+    interfaces:
+      - name: bond1.215
+        description: "ODF VLAN 215 on bond1"
+        type: vlan
+        state: up
+        vlan:
+          base-iface: ens1f1
+          id: 215
+        ipv4:
+          enabled: false
+      - name: bond1-mvlan
+        description: "ODF mvlan on single IF 215"
+        type: mac-vlan
+        state: up
+        mac-vlan:
+          base-iface: bond1.215
+          mode: bridge
+          promiscuous: true
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 20.1.15.106
+            prefix-length: 24
+    routes:
+      config:
+      - destination: 20.1.15.0/24
+        next-hop-interface: bond1-mvlan
+4.5.3. create NNCP policies on a bonded interface (two interfaces → bond interface → VLAN → MACVLAN)
+create separate NNCP policies for master nodes
+
+
+[root@bastion NMSTATE]# cat nncp-odf-master1.yaml
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: odf-bond1-vlan-macvlan-master1-policy
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: master1.viairtel.samsungbsc.local
+    node-role.kubernetes.io/master: ""
+  desiredState:
+    interfaces:
+      - name: bond1
+        description: "ODF bond parent interface"
+        type: bond
+        state: up
+        ipv4:
+          enabled: false
+        link-aggregation:
+          mode: active-backup
+          options:
+            miimon: "100"
+            primary: ens1f1
+          port:
+          - ens1f1
+          - ens4f1
+      - name: bond1.215
+        description: "ODF VLAN 215 on bond1"
+        type: vlan
+        state: up
+        vlan:
+          base-iface: bond1
+          id: 215
+        ipv4:
+          enabled: false
+      - name: bond1-mvlan
+        description: "ODF macvlan on bond1 VLAN 215"
+        type: mac-vlan
+        state: up
+        mac-vlan:
+          base-iface: bond1.215
+          mode: bridge
+          promiscuous: true
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 20.1.15.103
+            prefix-length: 24
+    routes:
+      config:
+      - destination: 20.1.15.0/24
+        next-hop-interface: bond1-mvlan
+[root@bastion NMSTATE]#
+
+
+[root@bastion NMSTATE]# cat nncp-odf-master2.yaml
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: odf-bond1-vlan-macvlan-master2-policy
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: master2.viairtel.samsungbsc.local
+    node-role.kubernetes.io/master: ""
+  desiredState:
+    interfaces:
+      - name: bond1
+        description: "ODF bond parent interface"
+        type: bond
+        state: up
+        ipv4:
+          enabled: false
+        link-aggregation:
+          mode: active-backup
+          options:
+            miimon: "100"
+            primary: ens1f1
+          port:
+          - ens1f1
+          - ens4f1
+      - name: bond1.215
+        description: "ODF VLAN 215 on bond1"
+        type: vlan
+        state: up
+        vlan:
+          base-iface: bond1
+          id: 215
+        ipv4:
+          enabled: false
+      - name: bond1-mvlan
+        description: "ODF macvlan on bond1 VLAN 215"
+        type: mac-vlan
+        state: up
+        mac-vlan:
+          base-iface: bond1.215
+          mode: bridge
+          promiscuous: true
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 20.1.15.102
+            prefix-length: 24
+    routes:
+      config:
+      - destination: 20.1.15.0/24
+        next-hop-interface: bond1-mvlan
+[root@bastion NMSTATE]#
+
+
+[root@bastion NMSTATE]# cat nncp-odf-master3.yaml
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: odf-bond1-vlan-macvlan-master3-policy
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: master3.viairtel.samsungbsc.local
+    node-role.kubernetes.io/master: ""
+  desiredState:
+    interfaces:
+      - name: bond1
+        description: "ODF bond parent interface"
+        type: bond
+        state: up
+        ipv4:
+          enabled: false
+        link-aggregation:
+          mode: active-backup
+          options:
+            miimon: "100"
+            primary: ens1f1
+          port:
+          - ens1f1
+          - ens4f1
+      - name: bond1.215
+        description: "ODF VLAN 215 on bond1"
+        type: vlan
+        state: up
+        vlan:
+          base-iface: bond1
+          id: 215
+        ipv4:
+          enabled: false
+      - name: bond1-mvlan
+        description: "ODF macvlan on bond1 VLAN 215"
+        type: mac-vlan
+        state: up
+        mac-vlan:
+          base-iface: bond1.215
+          mode: bridge
+          promiscuous: true
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 20.1.15.104
+            prefix-length: 24
+    routes:
+      config:
+      - destination: 20.1.15.0/24
+        next-hop-interface: bond1-mvlan
+4.5.4.  create NNCP policies on a bonded interface (two interfaces → bond interface → MACVLAN)
+create separate NNCP policies for master nodes
+
+
+[root@bastion NMSTATE]# cat nncp-odf-master1.yaml
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: odf-bond1-macvlan-master1-policy
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: master1.viairtel.samsungbsc.local
+    node-role.kubernetes.io/master: ""
+  desiredState:
+    interfaces:
+      - name: bond1
+        description: "ODF bond parent interface"
+        type: bond
+        state: up
+        ipv4:
+          enabled: false
+        link-aggregation:
+          mode: active-backup
+          options:
+            miimon: "100"
+            primary: ens1f1
+          port:
+          - ens1f1
+          - ens4f1
+      - name: bond1-mvlan
+        description: "ODF macvlan on bond1"
+        type: mac-vlan
+        state: up
+        mac-vlan:
+          base-iface: bond1
+          mode: bridge
+          promiscuous: true
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 20.1.15.103
+            prefix-length: 24
+    routes:
+      config:
+      - destination: 20.1.15.0/24
+        next-hop-interface: bond1-mvlan
+[root@bastion NMSTATE]#
+
+
+[root@bastion NMSTATE]# cat nncp-odf-master2.yaml
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: odf-bond1-macvlan-master2-policy
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: master2.viairtel.samsungbsc.local
+    node-role.kubernetes.io/master: ""
+  desiredState:
+    interfaces:
+      - name: bond1
+        description: "ODF bond parent interface"
+        type: bond
+        state: up
+        ipv4:
+          enabled: false
+        link-aggregation:
+          mode: active-backup
+          options:
+            miimon: "100"
+            primary: ens1f1
+          port:
+          - ens1f1
+          - ens4f1
+      - name: bond1-mvlan
+        description: "ODF macvlan on bond1"
+        type: mac-vlan
+        state: up
+        mac-vlan:
+          base-iface: bond1
+          mode: bridge
+          promiscuous: true
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 20.1.15.102
+            prefix-length: 24
+    routes:
+      config:
+      - destination: 20.1.15.0/24
+        next-hop-interface: bond1-mvlan
+[root@bastion NMSTATE]#
+
+
+[root@bastion NMSTATE]# cat nncp-odf-master3.yaml
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: odf-bond1-macvlan-master3-policy
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: master3.viairtel.samsungbsc.local
+    node-role.kubernetes.io/master: ""
+  desiredState:
+    interfaces:
+      - name: bond1
+        description: "ODF bond parent interface"
+        type: bond
+        state: up
+        ipv4:
+          enabled: false
+        link-aggregation:
+          mode: active-backup
+          options:
+            miimon: "100"
+            primary: ens1f1
+          port:
+          - ens1f1
+          - ens4f1
+      - name: bond1-mvlan
+        description: "ODF macvlan on bond1"
+        type: mac-vlan
+        state: up
+        mac-vlan:
+          base-iface: bond1
+          mode: bridge
+          promiscuous: true
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 20.1.15.104
+            prefix-length: 24
+    routes:
+      config:
+      - destination: 20.1.15.0/24
+        next-hop-interface: bond1-mvlan
