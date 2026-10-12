@@ -1,0 +1,114 @@
+## Adding a worker node to an agent-based OpenShift cluster
+
+The method depends on your OpenShift version. Check it with `oc get clusterversion`.
+
+### OpenShift 4.17 and later (recommended method)
+
+These versions include the `oc adm node-image` command. It generates a bootable ISO that joins a new node to your existing cluster. It was Tech Preview in 4.16.
+
+**Prerequisites**
+
+- You are logged in with `cluster-admin` and using an `oc` client that matches the cluster version.
+- The new host can reach the API (port 6443) and the Machine Config Server (port 22623).
+- DNS and NTP work for the new host.
+- You know the new host's MAC address and the network details you want it to use.
+
+**Step 1 – Create `nodes-config.yaml`**
+
+```yaml
+hosts:
+- hostname: worker-3.example.com
+  rootDeviceHints:
+    deviceName: /dev/sda
+  interfaces:
+  - name: eno1
+    macAddress: 52:54:00:aa:bb:cc
+  networkConfig:          # NMState format; omit this block if using DHCP
+    interfaces:
+    - name: eno1
+      type: ethernet
+      state: up
+      mac-address: 52:54:00:aa:bb:cc
+      ipv4:
+        enabled: true
+        dhcp: false
+        address:
+        - ip: 192.168.10.53
+          prefix-length: 24
+    dns-resolver:
+      config:
+        server:
+        - 192.168.10.1
+    routes:
+      config:
+      - destination: 0.0.0.0/0
+        next-hop-address: 192.168.10.1
+        next-hop-interface: eno1
+```
+
+You can list several hosts under `hosts:` to add multiple workers with one ISO.
+
+**Step 2 – Generate the ISO**
+
+```bash
+oc adm node-image create nodes-config.yaml --dir=./output
+```
+
+This runs a pod in the cluster and writes `node.x86_64.iso` to the output directory. Add `--pxe` if you want PXE artifacts instead of an ISO.
+
+**Step 3 – Boot the new host from the ISO**
+
+Use virtual media through iDRAC, iLO, or BMC, a USB stick, or attach it to the VM. The host installs RHCOS and reboots on its own.
+
+**Step 4 – Monitor progress**
+
+```bash
+oc adm node-image monitor --ip-addresses 192.168.10.53
+```
+
+**Step 5 – Approve the CSRs**
+
+There are usually two rounds: a client CSR first, then a serving CSR a minute or two later.
+
+```bash
+oc get csr | grep Pending
+oc get csr -o name | xargs oc adm certificate approve
+```
+
+The monitor command also shows pending CSRs for the node.
+
+**Step 6 – Verify**
+
+```bash
+oc get nodes
+oc get mcp worker
+```
+
+Wait until the node is `Ready` and the worker MachineConfigPool shows it as updated.
+
+### OpenShift 4.14 / 4.15 (manual method)
+
+These versions don't have `node-image`, so you install RHCOS with the cluster's worker ignition.
+
+1. Extract the worker ignition from the cluster:
+   ```bash
+   oc extract -n openshift-machine-api secret/worker-user-data-managed \
+     --keys=userData --to=- > worker.ign
+   ```
+2. Get an RHCOS live ISO that matches the cluster:
+   ```bash
+   openshift-install coreos print-stream-json | grep '\.iso[^.]'
+   ```
+3. Host `worker.ign` on a web server reachable by the node. Then boot the live ISO and install:
+   ```bash
+   sudo coreos-installer install /dev/sda \
+     --ignition-url http://<webserver>/worker.ign --insecure-ignition
+   ```
+   Configure static IPs first with `nmtui` and add `--copy-network` if you need them. Alternatively, embed the ignition with `coreos-installer iso ignition embed`.
+4. Reboot, then approve the CSRs and verify, as in steps 5–6 above.
+
+### Common issues
+
+- **Node never appears:** Check that port 22623 is reachable from the new host and that its hostname resolves.
+- **The ISO generation pod fails:** The cluster must be able to pull release images, so check the pull secret and mirror config if you're disconnected.
+- **Ingress traffic doesn't reach the new worker:** If you use an external load balancer, add the worker to the backend pools for ports 80 and 443.
