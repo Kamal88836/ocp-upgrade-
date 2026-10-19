@@ -1,0 +1,647 @@
+Check SRIOV capable NICs and NUMA alignment in 3 Servers Collapse source
+
+
+# check which NICs are SRIOV capable
+
+srib@ocp-haproxy-4:~/ocp-configMNO$ ssh -l core master1.lab4.srib-lab-ocp.lan
+Red Hat Enterprise Linux CoreOS 418.94.202508261658-0
+  Part of OpenShift 4.18, RHCOS is a Kubernetes-native operating system
+  managed by the Machine Config Operator (`clusteroperator/machine-config`).
+
+WARNING: Direct SSH access to machines is not recommended; instead,
+make configuration changes via `machineconfig` objects:
+  https://docs.openshift.com/container-platform/4.18/architecture/architecture-rhcos.html
+
+---
+Last login: Fri Oct 10 09:40:52 2025 from 2405:100:200:70::1:1799
+[systemd]
+Failed Units: 2
+  chronyd.service
+  NetworkManager-wait-online.service
+[core@master1 ~]$ for dev in /sys/class/net/*; do   if [ -f "$dev/device/sriov_totalvfs" ]; then     echo "$(basename $dev): $(cat $dev/device/sriov_totalvfs) total VFs possible";   fi; done
+ens10f0: 7 total VFs possible
+ens10f1: 7 total VFs possible
+ens10f2: 7 total VFs possible
+ens10f3: 7 total VFs possible
+ens1f0: 64 total VFs possible
+ens1f1: 64 total VFs possible
+ens1f2: 64 total VFs possible
+ens1f3: 64 total VFs possible
+ens3f0: 64 total VFs possible
+ens3f1: 64 total VFs possible
+ens3f2: 64 total VFs possible
+ens3f3: 64 total VFs possible
+ens4f0: 64 total VFs possible
+ens4f1: 64 total VFs possible
+ens4f2: 64 total VFs possible
+ens4f3: 64 total VFs possible
+ens7f0: 64 total VFs possible
+ens7f1: 64 total VFs possible
+ens7f2: 64 total VFs possible
+ens7f3: 64 total VFs possible
+[core@master1 ~]$
+[core@master1 ~]$
+[core@master1 ~]$ exit
+logout
+Connection to master1.lab4.srib-lab-ocp.lan closed.
+srib@ocp-haproxy-4:~/ocp-configMNO$ ssh -l core master2.lab4.srib-lab-ocp.lan
+Red Hat Enterprise Linux CoreOS 418.94.202508261658-0
+  Part of OpenShift 4.18, RHCOS is a Kubernetes-native operating system
+  managed by the Machine Config Operator (`clusteroperator/machine-config`).
+
+WARNING: Direct SSH access to machines is not recommended; instead,
+make configuration changes via `machineconfig` objects:
+  https://docs.openshift.com/container-platform/4.18/architecture/architecture-rhcos.html
+
+---
+Last login: Fri Oct 10 09:41:10 2025 from 2405:100:200:70::1:1799
+[systemd]
+Failed Units: 2
+  chronyd.service
+  NetworkManager-wait-online.service
+[core@master2 ~]$ for dev in /sys/class/net/*; do   if [ -f "$dev/device/sriov_totalvfs" ]; then     echo "$(basename $dev): $(cat $dev/device/sriov_totalvfs) total VFs possible";   fi; done
+ens10f0: 7 total VFs possible
+ens10f1: 7 total VFs possible
+ens10f2: 7 total VFs possible
+ens10f3: 7 total VFs possible
+ens1f0: 64 total VFs possible
+ens1f1: 64 total VFs possible
+ens1f2: 64 total VFs possible
+ens1f3: 64 total VFs possible
+ens3f0: 64 total VFs possible
+ens3f1: 64 total VFs possible
+ens3f2: 64 total VFs possible
+ens3f3: 64 total VFs possible
+ens4f0: 64 total VFs possible
+ens4f1: 64 total VFs possible
+ens4f2: 64 total VFs possible
+ens4f3: 64 total VFs possible
+ens7f0: 64 total VFs possible
+ens7f1: 64 total VFs possible
+ens7f2: 64 total VFs possible
+ens7f3: 64 total VFs possible
+[core@master2 ~]$
+[core@master2 ~]$
+[core@master2 ~]$ exit
+logout
+Connection to master2.lab4.srib-lab-ocp.lan closed.
+srib@ocp-haproxy-4:~/ocp-configMNO$ ssh -l core master3.lab4.srib-lab-ocp.lan
+Red Hat Enterprise Linux CoreOS 418.94.202508261658-0
+  Part of OpenShift 4.18, RHCOS is a Kubernetes-native operating system
+  managed by the Machine Config Operator (`clusteroperator/machine-config`).
+
+WARNING: Direct SSH access to machines is not recommended; instead,
+make configuration changes via `machineconfig` objects:
+  https://docs.openshift.com/container-platform/4.18/architecture/architecture-rhcos.html
+
+---
+Last login: Fri Oct 10 09:40:37 2025 from 2405:100:200:70::1:1799
+[systemd]
+Failed Units: 2
+  chronyd.service
+  NetworkManager-wait-online.service
+[core@master3 ~]$ for dev in /sys/class/net/*; do   if [ -f "$dev/device/sriov_totalvfs" ]; then     echo "$(basename $dev): $(cat $dev/device/sriov_totalvfs) total VFs possible";   fi; done
+ens10f0: 7 total VFs possible
+ens10f1: 7 total VFs possible
+ens10f2: 7 total VFs possible
+ens10f3: 7 total VFs possible
+ens1f0: 64 total VFs possible
+ens1f1: 64 total VFs possible
+ens1f2: 64 total VFs possible
+ens1f3: 64 total VFs possible
+ens3f0: 64 total VFs possible
+ens3f1: 64 total VFs possible
+ens3f2: 64 total VFs possible
+ens3f3: 64 total VFs possible
+ens4f0: 64 total VFs possible
+ens4f1: 64 total VFs possible
+ens4f2: 64 total VFs possible
+ens4f3: 64 total VFs possible
+ens7f0: 64 total VFs possible
+ens7f1: 64 total VFs possible
+ens7f2: 64 total VFs possible
+ens7f3: 64 total VFs possible
+[core@master3 ~]$
+[core@master3 ~]$
+[core@master3 ~]$
+[core@master3 ~]$ exit
+logout
+Connection to master3.lab4.srib-lab-ocp.lan closed.
+srib@ocp-haproxy-4:~/ocp-configMNO$
+srib@ocp-haproxy-4:~/ocp-configMNO$
+
+
+
+
+
+# check the NUMA mappings
+
+srib@ocp-haproxy-4:~/ocp-config$ ssh -l core master1.lab4.srib-lab-ocp.lan
+Red Hat Enterprise Linux CoreOS 414.92.202409250559-0
+  Part of OpenShift 4.14, RHCOS is a Kubernetes native operating system
+  managed by the Machine Config Operator (`clusteroperator/machine-config`).
+
+WARNING: Direct SSH access to machines is not recommended; instead,
+make configuration changes via `machineconfig` objects:
+  https://docs.openshift.com/container-platform/4.14/architecture/architecture-rhcos.html
+
+---
+Last login: Wed Dec  4 13:45:48 2024
+[systemd]
+Failed Units: 1
+  NetworkManager-wait-online.service
+[core@master1 ~]$ cat /sys/class/net/ens1f2/device/numa_node
+0
+[core@master1 ~]$ cat /sys/class/net/ens3f2/device/numa_node
+0
+[core@master1 ~]$ cat /sys/class/net/ens4f2/device/numa_node
+1
+[core@master1 ~]$ cat /sys/class/net/ens7f2/device/numa_node
+1
+[core@master1 ~]$ exit
+logout
+Connection to master1.lab4.srib-lab-ocp.lan closed.
+srib@ocp-haproxy-4:~/ocp-config$ ssh -l core master2.lab4.srib-lab-ocp.lan
+Red Hat Enterprise Linux CoreOS 414.92.202409250559-0
+  Part of OpenShift 4.14, RHCOS is a Kubernetes native operating system
+  managed by the Machine Config Operator (`clusteroperator/machine-config`).
+
+WARNING: Direct SSH access to machines is not recommended; instead,
+make configuration changes via `machineconfig` objects:
+  https://docs.openshift.com/container-platform/4.14/architecture/architecture-rhcos.html
+
+---
+Last login: Wed Dec  4 13:48:46 2024
+[systemd]
+Failed Units: 1
+  NetworkManager-wait-online.service
+[core@master2 ~]$ cat /sys/class/net/ens1f2/device/numa_node
+0
+[core@master2 ~]$ cat /sys/class/net/ens3f2/device/numa_node
+0
+[core@master2 ~]$ cat /sys/class/net/ens4f2/device/numa_node
+1
+[core@master2 ~]$  cat /sys/class/net/ens7f2/device/numa_node
+1
+[core@master2 ~]$ exit
+logout
+Connection to master2.lab4.srib-lab-ocp.lan closed.
+srib@ocp-haproxy-4:~/ocp-config$ ssh -l core master3.lab4.srib-lab-ocp.lan
+Red Hat Enterprise Linux CoreOS 414.92.202409250559-0
+  Part of OpenShift 4.14, RHCOS is a Kubernetes native operating system
+  managed by the Machine Config Operator (`clusteroperator/machine-config`).
+
+WARNING: Direct SSH access to machines is not recommended; instead,
+make configuration changes via `machineconfig` objects:
+  https://docs.openshift.com/container-platform/4.14/architecture/architecture-rhcos.html
+
+---
+Last login: Wed Dec  4 13:50:37 2024
+[systemd]
+Failed Units: 1
+  NetworkManager-wait-online.service
+[core@master3 ~]$ cat /sys/class/net/ens1f2/device/numa_node
+0
+[core@master3 ~]$ cat /sys/class/net/ens3f2/device/numa_node
+0
+[core@master3 ~]$ cat /sys/class/net/ens4f2/device/numa_node
+1
+[core@master3 ~]$ cat /sys/class/net/ens7f2/device/numa_node
+1
+[core@master3 ~]$ exit
+logout
+Connection to master3.lab4.srib-lab-ocp.lan closed.
+srib@ocp-haproxy-4:~/ocp-config$
+5.10.4. Sample SRIOV Configuration
+NOTE:
+
+In OCP version 4.14.30 onwards there is bug when mtu is configured at sriov node policy which is at host level. As per Redhat recommendation removed mtu setting from sriov node policy.
+
+
+
+NUMA 0 BPP SRIOV Config
+
+
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-ens1f2-bh0u
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: pci_sriov_net_bh0u
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: 'true'
+  priority: 99
+  numVfs: 16
+  nicSelector:
+    vendor: '8086'
+    deviceID: '1593'
+    pfNames: ["ens1f2#0-3"]
+  deviceType: vfio-pci
+  needVhostNet: true
+  isRdma: false
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-ens3f2-bh0u-1
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: pci_sriov_net_bh0u_1
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: 'true'
+  priority: 99
+  numVfs: 16
+  nicSelector:
+    vendor: '8086'
+    deviceID: '1593'
+    pfNames: ["ens3f2#0-3"]
+  deviceType: vfio-pci
+  needVhostNet: true
+  isRdma: false
+NUMA 0 BIP SRIOV Config
+
+
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-ens1f2-bh0c
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: pci_sriov_net_bh0c
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: 'true'
+  priority: 99
+  numVfs: 16
+  nicSelector:
+    vendor: '8086'
+    deviceID: '1593'
+    pfNames: ["ens1f2#4-8"]
+  deviceType: netdevice
+  isRdma: false
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-ens3f2-bh0c-1
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: pci_sriov_net_bh0c_1
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: 'true'
+  priority: 99
+  numVfs: 16
+  nicSelector:
+    vendor: '8086'
+    deviceID: '1593'
+    pfNames: ["ens3f2#4-8"]
+  deviceType: netdevice
+  isRdma: false
+NUMA 1 BPP SRIOV Config
+
+
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-ens4f2-bh0u-2
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: pci_sriov_net_bh0u_2
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: 'true'
+  priority: 99
+  numVfs: 16
+  nicSelector:
+    vendor: '8086'
+    deviceID: '1593'
+    pfNames: ["ens4f2#0-3"]
+  deviceType: vfio-pci
+  needVhostNet: true
+  isRdma: false
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-ens7f2-bh0u-2-1
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: pci_sriov_net_bh0u_2_1
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: 'true'
+  priority: 99
+  numVfs: 16
+  nicSelector:
+    vendor: '8086'
+    deviceID: '1593'
+    pfNames: ["ens7f2#0-3"]
+  deviceType: vfio-pci
+  needVhostNet: true
+  isRdma: false
+5.10.5. Merge and create One SRIOV Node Configuration and Apply
+
+
+sriov-node-network.yaml Collapse source
+
+
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-ens1f2-bh0u
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: pci_sriov_net_bh0u
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: 'true'
+  priority: 99
+  numVfs: 16
+  nicSelector:
+    vendor: '8086'
+    deviceID: '1593'
+    pfNames: ["ens1f2#0-3"]
+  deviceType: vfio-pci
+  needVhostNet: true
+  isRdma: false
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-ens3f2-bh0u-1
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: pci_sriov_net_bh0u_1
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: 'true'
+  priority: 99
+  numVfs: 16
+  nicSelector:
+    vendor: '8086'
+    deviceID: '1593'
+    pfNames: ["ens3f2#0-3"]
+  deviceType: vfio-pci
+  needVhostNet: true
+  isRdma: false
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-ens1f2-bh0c
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: pci_sriov_net_bh0c
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: 'true'
+  priority: 99
+  numVfs: 16
+  nicSelector:
+    vendor: '8086'
+    deviceID: '1593'
+    pfNames: ["ens1f2#4-8"]
+  deviceType: netdevice
+  isRdma: false
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-ens3f2-bh0c-1
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: pci_sriov_net_bh0c_1
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: 'true'
+  priority: 99
+  numVfs: 16
+  nicSelector:
+    vendor: '8086'
+    deviceID: '1593'
+    pfNames: ["ens3f2#4-8"]
+  deviceType: netdevice
+  isRdma: false
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-ens4f2-bh0u-2
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: pci_sriov_net_bh0u_2
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: 'true'
+  priority: 99
+  numVfs: 16
+  nicSelector:
+    vendor: '8086'
+    deviceID: '1593'
+    pfNames: ["ens4f2#0-3"]
+  deviceType: vfio-pci
+  needVhostNet: true
+  isRdma: false
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-ens7f2-bh0u-2-1
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: pci_sriov_net_bh0u_2_1
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: 'true'
+  priority: 99
+  numVfs: 16
+  nicSelector:
+    vendor: '8086'
+    deviceID: '1593'
+    pfNames: ["ens7f2#0-3"]
+  deviceType: vfio-pci
+  needVhostNet: true
+  isRdma: false
+Apply SRIOV Configurations
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc apply -f sriov-node-network.yaml
+sriovnetworknodepolicy.sriovnetwork.openshift.io/policy-ens1f2-bh0u created
+sriovnetworknodepolicy.sriovnetwork.openshift.io/policy-ens3f2-bh0u-1 created
+sriovnetworknodepolicy.sriovnetwork.openshift.io/policy-ens1f2-bh0c created
+sriovnetworknodepolicy.sriovnetwork.openshift.io/policy-ens3f2-bh0c-1 created
+sriovnetworknodepolicy.sriovnetwork.openshift.io/policy-ens4f2-bh0u-2 created
+sriovnetworknodepolicy.sriovnetwork.openshift.io/policy-ens7f2-bh0u-2-1 created
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+
+
+Important
+
+Master Nodes MAY go for Reboot, If Nodes Reboots one by one, check console of respective server for status. WAIT FOR Master NODES TO COME UP. If Nodes doesnot reboot wait for Few Minutes and continue check
+
+5.10.6. After all Nodes have Come UP, Check SRIOV Configuration Status
+
+
+Check SRIOV Configurations
+
+
+srib@ocp-haproxy-4:~/ocp-helm$ oc get sriovnetworknodestates -n openshift-sriov-network-operator
+NAME                            SYNC STATUS   DESIRED SYNC STATE   CURRENT SYNC STATE   AGE
+master1.lab4.srib-lab-ocp.lan   Succeeded     Idle                 Idle                 4h19m
+master2.lab4.srib-lab-ocp.lan   Succeeded     Idle                 Idle                 4h19m
+master3.lab4.srib-lab-ocp.lan   Succeeded     Idle                 Idle                 4h19m
+srib@ocp-haproxy-4:~/ocp-helm$
+Check SRIOV Configurations in Details Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-helm$ ssh -l core master1.lab4.srib-lab-ocp.lan
+Red Hat Enterprise Linux CoreOS 414.92.202409250559-0
+  Part of OpenShift 4.14, RHCOS is a Kubernetes native operating system
+  managed by the Machine Config Operator (`clusteroperator/machine-config`).
+
+WARNING: Direct SSH access to machines is not recommended; instead,
+make configuration changes via `machineconfig` objects:
+  https://docs.openshift.com/container-platform/4.14/architecture/architecture-rhcos.html
+
+---
+Last login: Wed Dec  4 17:11:59 2024
+[systemd]
+Failed Units: 1
+  NetworkManager-wait-online.service
+[core@master1 ~]$ ip link show ens1f2
+12: ens1f2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 50:7c:6f:4b:9f:5a brd ff:ff:ff:ff:ff:ff
+    vf 0     link/ether ee:5d:db:a3:c3:71 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 1     link/ether 0a:fd:00:4d:65:eb brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 2     link/ether 02:90:25:a5:74:1d brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 3     link/ether aa:3b:82:51:73:bb brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 4     link/ether ca:7d:9a:ca:1f:c4 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 5     link/ether c2:8c:1d:c1:93:27 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 6     link/ether 6e:f0:cc:dd:6c:87 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 7     link/ether d6:00:21:50:60:62 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 8     link/ether 16:88:9e:00:50:73 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 9     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 10     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 11     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 12     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 13     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 14     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 15     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    altname enp17s0f2
+[core@master1 ~]$ ip link show ens3f2
+8: ens3f2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 6c:fe:54:63:09:76 brd ff:ff:ff:ff:ff:ff
+    vf 0     link/ether e6:9d:30:f2:95:d8 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 1     link/ether 92:60:68:84:8b:ab brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 2     link/ether 26:e5:c2:34:ec:a0 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 3     link/ether d2:29:8f:ff:0a:43 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 4     link/ether 2e:28:46:a8:a0:49 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 5     link/ether 82:fc:e7:47:be:c9 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 6     link/ether 2e:0e:f1:41:dd:9d brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 7     link/ether 7a:77:bd:3b:e1:7a brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 8     link/ether ae:6f:19:5e:0e:53 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 9     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 10     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 11     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 12     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 13     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 14     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 15     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    altname enp15s0f2
+[core@master1 ~]$ ip link show ens4f2
+16: ens4f2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 6c:fe:54:63:08:f6 brd ff:ff:ff:ff:ff:ff
+    vf 0     link/ether f6:f4:59:47:76:0e brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 1     link/ether fe:f8:e8:92:d8:d4 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 2     link/ether 82:bd:6b:7e:68:0c brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 3     link/ether b6:6c:45:cb:94:02 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 4     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 5     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 6     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 7     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 8     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 9     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 10     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 11     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 12     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 13     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 14     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 15     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    altname enp133s0f2
+[core@master1 ~]$ ip link show ens7f2
+20: ens7f2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 6c:fe:54:63:09:a2 brd ff:ff:ff:ff:ff:ff
+    vf 0     link/ether f6:e7:94:58:fd:16 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 1     link/ether 6e:a8:db:97:f7:1d brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 2     link/ether 2a:73:20:6c:5e:d8 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 3     link/ether 8a:98:23:9b:8b:16 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 4     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 5     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 6     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 7     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 8     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 9     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 10     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 11     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 12     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 13     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 14     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    vf 15     link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff, spoof checking on, link-state auto, trust off
+    altname enp192s0f2
+[core@master1 ~]$ exit
+logout
+Connection to master1.lab4.srib-lab-ocp.lan closed.
+srib@ocp-haproxy-4:~/ocp-helm$
+
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc describe nodes | grep pci_sriov
+  openshift.io/pci_sriov_net_bh0c:         5
+  openshift.io/pci_sriov_net_bh0c_1:       5
+  openshift.io/pci_sriov_net_bh0u:         4
+  openshift.io/pci_sriov_net_bh0u_1:       4
+  openshift.io/pci_sriov_net_bh0u_2:       4
+  openshift.io/pci_sriov_net_bh0u_2_1:     4
+  openshift.io/pci_sriov_net_bh0c:         5
+  openshift.io/pci_sriov_net_bh0c_1:       5
+  openshift.io/pci_sriov_net_bh0u:         4
+  openshift.io/pci_sriov_net_bh0u_1:       4
+  openshift.io/pci_sriov_net_bh0u_2:       4
+  openshift.io/pci_sriov_net_bh0u_2_1:     4
+  openshift.io/pci_sriov_net_bh0c         0            0
+  openshift.io/pci_sriov_net_bh0c_1       0            0
+  openshift.io/pci_sriov_net_bh0u         0            0
+  openshift.io/pci_sriov_net_bh0u_1       0            0
+  openshift.io/pci_sriov_net_bh0u_2       0            0
+  openshift.io/pci_sriov_net_bh0u_2_1     0            0
+  openshift.io/pci_sriov_net_bh0c:         5
+  openshift.io/pci_sriov_net_bh0c_1:       5
+  openshift.io/pci_sriov_net_bh0u:         4
+  openshift.io/pci_sriov_net_bh0u_1:       4
+  openshift.io/pci_sriov_net_bh0u_2:       4
+  openshift.io/pci_sriov_net_bh0u_2_1:     4
+  openshift.io/pci_sriov_net_bh0c:         5
+  openshift.io/pci_sriov_net_bh0c_1:       5
+  openshift.io/pci_sriov_net_bh0u:         4
+  openshift.io/pci_sriov_net_bh0u_1:       4
+  openshift.io/pci_sriov_net_bh0u_2:       4
+  openshift.io/pci_sriov_net_bh0u_2_1:     4
+  openshift.io/pci_sriov_net_bh0c         0            0
+  openshift.io/pci_sriov_net_bh0c_1       0            0
+  openshift.io/pci_sriov_net_bh0u         0            0
+  openshift.io/pci_sriov_net_bh0u_1       0            0
+  openshift.io/pci_sriov_net_bh0u_2       0            0
+  openshift.io/pci_sriov_net_bh0u_2_1     0            0
+  openshift.io/pci_sriov_net_bh0c:         5
+  openshift.io/pci_sriov_net_bh0c_1:       5
+  openshift.io/pci_sriov_net_bh0u:         4
+  openshift.io/pci_sriov_net_bh0u_1:       4
+  openshift.io/pci_sriov_net_bh0u_2:       4
+  openshift.io/pci_sriov_net_bh0u_2_1:     4
+  openshift.io/pci_sriov_net_bh0c:         5
+  openshift.io/pci_sriov_net_bh0c_1:       5
+  openshift.io/pci_sriov_net_bh0u:         4
+  openshift.io/pci_sriov_net_bh0u_1:       4
+  openshift.io/pci_sriov_net_bh0u_2:       4
+  openshift.io/pci_sriov_net_bh0u_2_1:     4
+  openshift.io/pci_sriov_net_bh0c         0             0
+  openshift.io/pci_sriov_net_bh0c_1       0             0
+  openshift.io/pci_sriov_net_bh0u         0             0
+  openshift.io/pci_sriov_net_bh0u_1       0             0
+  openshift.io/pci_sriov_net_bh0u_2       0             0
+  openshift.io/pci_sriov_net_bh0u_2_1     0             0
+srib@ocp-haproxy-4:~/ocp-config$
