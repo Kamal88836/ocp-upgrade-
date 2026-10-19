@@ -1,0 +1,759 @@
+5.10. SRIOV Operator for POD Networking (Masters):
+
+
+
+
+
+
+
+
+5.10.1.  Create SRIOV Operator 
+sriov-operator.yaml Collapse source
+
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-sriov-network-operator
+  annotations:
+    workload.openshift.io/allowed: management
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: sriov-network-operators
+  namespace: openshift-sriov-network-operator
+spec:
+  targetNamespaces:
+  - openshift-sriov-network-operator
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: sriov-network-operator-subscription
+  namespace: openshift-sriov-network-operator
+spec:
+  channel: stable                              #<--- Get value from above step
+  name: sriov-network-operator
+  source: cs-redhat-operator-index             #<--- Get value from above step
+  sourceNamespace: openshift-marketplace       #<--- Get value from above step
+
+
+
+##################################################################################################
+
+# for 4.18 OCP please use the following YAML
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-sriov-network-operator
+  annotations:
+    workload.openshift.io/allowed: management
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: sriov-network-operators
+  namespace: openshift-sriov-network-operator
+spec:
+  targetNamespaces:
+  - openshift-sriov-network-operator
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: sriov-network-operator-subscription
+  namespace: openshift-sriov-network-operator
+spec:
+  channel: stable
+  name: sriov-network-operator
+  source: cs-redhat-operator-index-v4-18
+  sourceNamespace: openshift-marketplace
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovOperatorConfig
+metadata:
+  name: default
+  namespace: openshift-sriov-network-operator
+spec:
+  enableInjector: true
+  enableOperatorWebhook: true
+  logLevel: 2
+  disableDrain: false
+
+Install Sriov Operator
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc apply -f sriov-operator.yaml
+namespace/openshift-sriov-network-operator created
+operatorgroup.operators.coreos.com/sriov-network-operators created
+subscription.operators.coreos.com/sriov-network-operator-subscription created
+sriovoperatorconfig.sriovnetwork.openshift.io/default created
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+
+
+Verify Sriov Operator Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc get sub -n openshift-sriov-network-operator
+NAME                                  PACKAGE                  SOURCE                     CHANNEL
+sriov-network-operator-subscription   sriov-network-operator   cs-redhat-operator-index   stable
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$ oc get csv -n openshift-sriov-network-operator
+NAME                                          DISPLAY                   VERSION               REPLACES   PHASE
+sriov-network-operator.v4.14.0-202411130434   SR-IOV Network Operator   4.14.0-202411130434              Installing
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$ oc get csv -n openshift-sriov-network-operator
+NAME                                          DISPLAY                   VERSION               REPLACES   PHASE
+sriov-network-operator.v4.14.0-202411130434   SR-IOV Network Operator   4.14.0-202411130434              Succeeded
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$ oc get daemonsets.apps -n openshift-sriov-network-operator
+NAME                          DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR                                            AGE
+network-resources-injector    3         3         3       3            3           kubernetes.io/os=linux                                   64s
+operator-webhook              3         3         3       3            3           kubernetes.io/os=linux                                   64s
+sriov-network-config-daemon   3         3         0       3            0           kubernetes.io/os=linux,node-role.kubernetes.io/worker=   64s
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$ oc get pod -o wide -n openshift-sriov-network-operator
+NAME                                     READY   STATUS    RESTARTS   AGE     IP            NODE                            NOMINATED NODE   READINESS GATES
+network-resources-injector-549px         1/1     Running   0          6m25s   10.125.0.81   master1.lab4.srib-lab-ocp.lan   <none>           <none>
+network-resources-injector-nmwsd         1/1     Running   0          6m25s   10.126.0.81   master2.lab4.srib-lab-ocp.lan   <none>           <none>
+network-resources-injector-xpcjb         1/1     Running   0          6m25s   10.124.0.91   master3.lab4.srib-lab-ocp.lan   <none>           <none>
+operator-webhook-f56mt                   1/1     Running   0          6m25s   10.126.0.79   master2.lab4.srib-lab-ocp.lan   <none>           <none>
+operator-webhook-gzn9q                   1/1     Running   0          6m25s   10.125.0.80   master1.lab4.srib-lab-ocp.lan   <none>           <none>
+operator-webhook-n74ph                   1/1     Running   0          6m25s   10.124.0.90   master3.lab4.srib-lab-ocp.lan   <none>           <none>
+sriov-network-config-daemon-brrcp        1/1     Running   0          6m25s   71.1.1.5      master1.lab4.srib-lab-ocp.lan   <none>           <none>
+sriov-network-config-daemon-c6czr        1/1     Running   0          6m25s   71.1.1.105    master2.lab4.srib-lab-ocp.lan   <none>           <none>
+sriov-network-config-daemon-vddkr        1/1     Running   0          6m25s   71.1.1.109    master3.lab4.srib-lab-ocp.lan   <none>           <none>
+sriov-network-operator-5674c56f9-2h8w4   1/1     Running   0          7m58s   10.126.0.78   master2.lab4.srib-lab-ocp.lan   <none>           <none>
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+5.10.2. Label Nodes where SRIOV config needs to be applied (Worker Only)
+Label Nodes Server 1 & Server 2 for SRIOV Enable
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc label node master1.lab4.srib-lab-ocp.lan feature.node.kubernetes.io/network-sriov.capable=true
+node/master1.lab4.srib-lab-ocp.lan labeled
+srib@ocp-haproxy-4:~/ocp-config$ oc label node master2.lab4.srib-lab-ocp.lan feature.node.kubernetes.io/network-sriov.capable=true
+node/master2.lab4.srib-lab-ocp.lan labeled
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$ oc label node master3.lab4.srib-lab-ocp.lan feature.node.kubernetes.io/network-sriov.capable=true
+node/master3.lab4.srib-lab-ocp.lan labeled
+srib@ocp-haproxy-4:~/ocp-config$
+srib@ocp-haproxy-4:~/ocp-config$ oc get nodes --show-labels
+NAME                            STATUS   ROLES                         AGE   VERSION            LABELS
+master1.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   22h   v1.27.16+03a907c   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,feature.node.kubernetes.io/network-sriov.capable=true,kubernetes.io/arch=amd64,kubernetes.io/hostname=master1.lab4.srib-lab-ocp.lan,kubernetes.io/os=linux,node-role.kubernetes.io/control-plane=,node-role.kubernetes.io/master=,node-role.kubernetes.io/worker=,node.openshift.io/os_id=rhcos
+master2.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   22h   v1.27.16+03a907c   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,feature.node.kubernetes.io/network-sriov.capable=true,kubernetes.io/arch=amd64,kubernetes.io/hostname=master2.lab4.srib-lab-ocp.lan,kubernetes.io/os=linux,node-role.kubernetes.io/control-plane=,node-role.kubernetes.io/master=,node-role.kubernetes.io/worker=,node.openshift.io/os_id=rhcos
+master3.lab4.srib-lab-ocp.lan   Ready    control-plane,master,worker   22h   v1.27.16+03a907c   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,feature.node.kubernetes.io/network-sriov.capable=true,kubernetes.io/arch=amd64,kubernetes.io/hostname=master3.lab4.srib-lab-ocp.lan,kubernetes.io/os=linux,node-role.kubernetes.io/control-plane=,node-role.kubernetes.io/master=,node-role.kubernetes.io/worker=,node.openshift.io/os_id=rhcos
+srib@ocp-haproxy-4:~/ocp-config$
+
+
+5.10.3. Verify if SRIOV config NICS are available
+Check if Required SRIOV Interfaces are available Collapse source
+
+
+srib@ocp-haproxy-4:~/ocp-config$ oc get -n openshift-sriov-network-operator SriovNetworkNodeState -o yaml
+apiVersion: v1
+items:
+- apiVersion: sriovnetwork.openshift.io/v1
+  kind: SriovNetworkNodeState
+  metadata:
+    annotations:
+      sriovnetwork.openshift.io/current-state: Idle
+    creationTimestamp: "2024-12-04T13:00:30Z"
+    generation: 1
+    name: master1.lab4.srib-lab-ocp.lan
+    namespace: openshift-sriov-network-operator
+    ownerReferences:
+    - apiVersion: sriovnetwork.openshift.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: SriovNetworkNodePolicy
+      name: default
+      uid: c128693c-bcd9-4c0e-8b1e-5a28f47d13f0
+    resourceVersion: "546181"
+    uid: 5963bd2c-3eee-4161-aea4-6c79b0140a4c
+  spec: {}
+  status:
+    interfaces:
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:74
+      mtu: 1500
+      name: ens3f0
+      pciAddress: 0000:0f:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:75
+      mtu: 1500
+      name: ens3f1
+      pciAddress: 0000:0f:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:76
+      mtu: 1500
+      name: ens3f2
+      pciAddress: 0000:0f:00.2
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:77
+      mtu: 1500
+      name: ens3f3
+      pciAddress: 0000:0f:00.3
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 10000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9f:58
+      mtu: 8500
+      name: ens1f0
+      pciAddress: "0000:11:00.0"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9f:59
+      mtu: 1500
+      name: ens1f1
+      pciAddress: "0000:11:00.1"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9f:5a
+      mtu: 1500
+      name: ens1f2
+      pciAddress: "0000:11:00.2"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9f:5b
+      mtu: 1500
+      name: ens1f3
+      pciAddress: "0000:11:00.3"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9f:58
+      mtu: 8500
+      name: ens4f0
+      pciAddress: 0000:85:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:08:f5
+      mtu: 1500
+      name: ens4f1
+      pciAddress: 0000:85:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:08:f6
+      mtu: 1500
+      name: ens4f2
+      pciAddress: 0000:85:00.2
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:08:f7
+      mtu: 1500
+      name: ens4f3
+      pciAddress: 0000:85:00.3
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:a0
+      mtu: 1500
+      name: ens7f0
+      pciAddress: 0000:c0:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:a1
+      mtu: 1500
+      name: ens7f1
+      pciAddress: 0000:c0:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:a2
+      mtu: 1500
+      name: ens7f2
+      pciAddress: 0000:c0:00.2
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:a3
+      mtu: 1500
+      name: ens7f3
+      pciAddress: 0000:c0:00.3
+      totalvfs: 64
+      vendor: "8086"
+    syncStatus: Succeeded
+- apiVersion: sriovnetwork.openshift.io/v1
+  kind: SriovNetworkNodeState
+  metadata:
+    annotations:
+      sriovnetwork.openshift.io/current-state: Idle
+    creationTimestamp: "2024-12-04T13:00:30Z"
+    generation: 1
+    name: master2.lab4.srib-lab-ocp.lan
+    namespace: openshift-sriov-network-operator
+    ownerReferences:
+    - apiVersion: sriovnetwork.openshift.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: SriovNetworkNodePolicy
+      name: default
+      uid: c128693c-bcd9-4c0e-8b1e-5a28f47d13f0
+    resourceVersion: "547312"
+    uid: ed0b96f6-6edc-47c5-b71b-9f1944417089
+  spec: {}
+  status:
+    interfaces:
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:62:d5:88
+      mtu: 1500
+      name: ens3f0
+      pciAddress: 0000:0f:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:62:d5:89
+      mtu: 1500
+      name: ens3f1
+      pciAddress: 0000:0f:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:62:d5:8a
+      mtu: 1500
+      name: ens3f2
+      pciAddress: 0000:0f:00.2
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:62:d5:8b
+      mtu: 1500
+      name: ens3f3
+      pciAddress: 0000:0f:00.3
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:98:d0
+      mtu: 8500
+      name: ens1f0
+      pciAddress: "0000:11:00.0"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:98:d1
+      mtu: 1500
+      name: ens1f1
+      pciAddress: "0000:11:00.1"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:98:d2
+      mtu: 1500
+      name: ens1f2
+      pciAddress: "0000:11:00.2"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:98:d3
+      mtu: 1500
+      name: ens1f3
+      pciAddress: "0000:11:00.3"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:98:d0
+      mtu: 8500
+      name: ens4f0
+      pciAddress: 0000:85:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:00:0d
+      mtu: 1500
+      name: ens4f1
+      pciAddress: 0000:85:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:00:0e
+      mtu: 1500
+      name: ens4f2
+      pciAddress: 0000:85:00.2
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:00:0f
+      mtu: 1500
+      name: ens4f3
+      pciAddress: 0000:85:00.3
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:01:18
+      mtu: 1500
+      name: ens7f0
+      pciAddress: 0000:c0:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:01:19
+      mtu: 1500
+      name: ens7f1
+      pciAddress: 0000:c0:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:01:1a
+      mtu: 1500
+      name: ens7f2
+      pciAddress: 0000:c0:00.2
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:01:1b
+      mtu: 1500
+      name: ens7f3
+      pciAddress: 0000:c0:00.3
+      totalvfs: 64
+      vendor: "8086"
+    syncStatus: Succeeded
+- apiVersion: sriovnetwork.openshift.io/v1
+  kind: SriovNetworkNodeState
+  metadata:
+    annotations:
+      sriovnetwork.openshift.io/current-state: Idle
+    creationTimestamp: "2024-12-04T13:00:30Z"
+    generation: 1
+    name: master3.lab4.srib-lab-ocp.lan
+    namespace: openshift-sriov-network-operator
+    ownerReferences:
+    - apiVersion: sriovnetwork.openshift.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: SriovNetworkNodePolicy
+      name: default
+      uid: c128693c-bcd9-4c0e-8b1e-5a28f47d13f0
+    resourceVersion: "546093"
+    uid: 27c82dec-6a1e-4317-9dd6-6c7dda3e2c76
+  spec: {}
+  status:
+    interfaces:
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:44
+      mtu: 1500
+      name: ens3f0
+      pciAddress: 0000:0f:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:45
+      mtu: 1500
+      name: ens3f1
+      pciAddress: 0000:0f:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:46
+      mtu: 1500
+      name: ens3f2
+      pciAddress: 0000:0f:00.2
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:47
+      mtu: 1500
+      name: ens3f3
+      pciAddress: 0000:0f:00.3
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9e:d0
+      mtu: 8500
+      name: ens1f0
+      pciAddress: "0000:11:00.0"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9e:d1
+      mtu: 1500
+      name: ens1f1
+      pciAddress: "0000:11:00.1"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9e:d2
+      mtu: 1500
+      name: ens1f2
+      pciAddress: "0000:11:00.2"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9e:d3
+      mtu: 1500
+      name: ens1f3
+      pciAddress: "0000:11:00.3"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9e:d0
+      mtu: 8500
+      name: ens4f0
+      pciAddress: 0000:85:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:62:dd:5d
+      mtu: 1500
+      name: ens4f1
+      pciAddress: 0000:85:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:62:dd:5e
+      mtu: 1500
+      name: ens4f2
+      pciAddress: 0000:85:00.2
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:62:dd:5f
+      mtu: 1500
+      name: ens4f3
+      pciAddress: 0000:85:00.3
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:00:ac
+      mtu: 1500
+      name: ens7f0
+      pciAddress: 0000:c0:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:00:ad
+      mtu: 1500
+      name: ens7f1
+      pciAddress: 0000:c0:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:00:ae
+      mtu: 1500
+      name: ens7f2
+      pciAddress: 0000:c0:00.2
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:00:af
+      mtu: 1500
+      name: ens7f3
+      pciAddress: 0000:c0:00.3
+      totalvfs: 64
+      vendor: "8086"
+    syncStatus: Succeeded
+kind: List
+metadata:
+  resourceVersion: ""
+srib@ocp-haproxy-4:~/ocp-config$
