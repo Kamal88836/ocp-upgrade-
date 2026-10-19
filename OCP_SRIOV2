@@ -1,0 +1,1238 @@
+check SriovNetworkNodeState after SRIOV VFs have been created Collapse source
+
+
+srib@ocp-haproxy-4:~$ oc get -n openshift-sriov-network-operator SriovNetworkNodeState -o yaml
+apiVersion: v1
+items:
+- apiVersion: sriovnetwork.openshift.io/v1
+  kind: SriovNetworkNodeState
+  metadata:
+    annotations:
+      sriovnetwork.openshift.io/current-state: Idle
+      sriovnetwork.openshift.io/desired-state: Idle
+    creationTimestamp: "2025-10-10T10:55:35Z"
+    generation: 2
+    name: master1.lab4.srib-lab-ocp.lan
+    namespace: openshift-sriov-network-operator
+    ownerReferences:
+    - apiVersion: sriovnetwork.openshift.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: SriovOperatorConfig
+      name: default
+      uid: b8188c90-e14c-49b9-bb85-a8bb03b4c88b
+    resourceVersion: "369193"
+    uid: be97062a-0d32-417b-b9c8-dbdc35b1d77a
+  spec:
+    bridges: {}
+    interfaces:
+    - name: ens1f2
+      numVfs: 16
+      pciAddress: "0000:11:00.2"
+      vfGroups:
+      - deviceType: vfio-pci
+        policyName: policy-ens1f2-bh0u
+        resourceName: pci_sriov_net_bh0u
+        vfRange: 0-3
+      - deviceType: netdevice
+        policyName: policy-ens1f2-bh0c
+        resourceName: pci_sriov_net_bh0c
+        vfRange: 4-8
+    - name: ens3f2
+      numVfs: 16
+      pciAddress: 0000:0f:00.2
+      vfGroups:
+      - deviceType: vfio-pci
+        policyName: policy-ens3f2-bh0u-1
+        resourceName: pci_sriov_net_bh0u_1
+        vfRange: 0-3
+      - deviceType: netdevice
+        policyName: policy-ens3f2-bh0c-1
+        resourceName: pci_sriov_net_bh0c_1
+        vfRange: 4-8
+    - name: ens4f2
+      numVfs: 16
+      pciAddress: 0000:85:00.2
+      vfGroups:
+      - deviceType: vfio-pci
+        policyName: policy-ens4f2-bh0u-2
+        resourceName: pci_sriov_net_bh0u_2
+        vfRange: 0-3
+    - name: ens7f2
+      numVfs: 16
+      pciAddress: 0000:c0:00.2
+      vfGroups:
+      - deviceType: vfio-pci
+        policyName: policy-ens7f2-bh0u-2-1
+        resourceName: pci_sriov_net_bh0u_2_1
+        vfRange: 0-3
+    system: {}
+  status:
+    bridges: {}
+    interfaces:
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:74
+      mtu: 1500
+      name: ens3f0
+      pciAddress: 0000:0f:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:75
+      mtu: 1500
+      name: ens3f1
+      pciAddress: 0000:0f:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - Vfs:
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:0f:11.0
+        vendor: "8086"
+        vfID: 0
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:0f:11.1
+        vendor: "8086"
+        vfID: 1
+      - deviceID: "1889"
+        driver: iavf
+        mac: a2:50:40:26:55:a2
+        mtu: 1500
+        name: ens3f2v10
+        pciAddress: 0000:0f:12.2
+        vendor: "8086"
+        vfID: 10
+      - deviceID: "1889"
+        driver: iavf
+        mac: e6:65:3e:5f:45:03
+        mtu: 1500
+        name: ens3f2v11
+        pciAddress: 0000:0f:12.3
+        vendor: "8086"
+        vfID: 11
+      - deviceID: "1889"
+        driver: iavf
+        mac: ba:59:a1:28:e3:db
+        mtu: 1500
+        name: ens3f2v12
+        pciAddress: 0000:0f:12.4
+        vendor: "8086"
+        vfID: 12
+      - deviceID: "1889"
+        driver: iavf
+        mac: 42:b2:59:fa:cd:88
+        mtu: 1500
+        name: ens3f2v13
+        pciAddress: 0000:0f:12.5
+        vendor: "8086"
+        vfID: 13
+      - deviceID: "1889"
+        driver: iavf
+        mac: f6:95:9e:2e:6a:35
+        mtu: 1500
+        name: ens3f2v14
+        pciAddress: 0000:0f:12.6
+        vendor: "8086"
+        vfID: 14
+      - deviceID: "1889"
+        driver: iavf
+        mac: 3e:58:64:3a:cf:74
+        mtu: 1500
+        name: ens3f2v15
+        pciAddress: 0000:0f:12.7
+        vendor: "8086"
+        vfID: 15
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:0f:11.2
+        vendor: "8086"
+        vfID: 2
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:0f:11.3
+        vendor: "8086"
+        vfID: 3
+      - deviceID: "1889"
+        driver: iavf
+        mac: b6:6e:78:91:b4:6c
+        mtu: 1500
+        name: ens3f2v4
+        pciAddress: 0000:0f:11.4
+        vendor: "8086"
+        vfID: 4
+      - deviceID: "1889"
+        driver: iavf
+        mac: e6:3f:4b:60:f2:18
+        mtu: 1500
+        name: ens3f2v5
+        pciAddress: 0000:0f:11.5
+        vendor: "8086"
+        vfID: 5
+      - deviceID: "1889"
+        driver: iavf
+        mac: f6:91:29:60:ec:26
+        mtu: 1500
+        name: ens3f2v6
+        pciAddress: 0000:0f:11.6
+        vendor: "8086"
+        vfID: 6
+      - deviceID: "1889"
+        driver: iavf
+        mac: be:13:d6:fa:2e:97
+        mtu: 1500
+        name: ens3f2v7
+        pciAddress: 0000:0f:11.7
+        vendor: "8086"
+        vfID: 7
+      - deviceID: "1889"
+        driver: iavf
+        mac: 72:9a:1e:55:52:09
+        mtu: 1500
+        name: ens3f2v8
+        pciAddress: 0000:0f:12.0
+        vendor: "8086"
+        vfID: 8
+      - deviceID: "1889"
+        driver: iavf
+        mac: 0e:d6:b2:d9:ff:2c
+        mtu: 1500
+        name: ens3f2v9
+        pciAddress: 0000:0f:12.1
+        vendor: "8086"
+        vfID: 9
+      deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:76
+      mtu: 1500
+      name: ens3f2
+      numVfs: 16
+      pciAddress: 0000:0f:00.2
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:77
+      mtu: 1500
+      name: ens3f3
+      pciAddress: 0000:0f:00.3
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 10000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9f:58
+      mtu: 8500
+      name: ens1f0
+      pciAddress: "0000:11:00.0"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9f:59
+      mtu: 1500
+      name: ens1f1
+      pciAddress: "0000:11:00.1"
+      totalvfs: 64
+      vendor: "8086"
+    - Vfs:
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: "0000:11:11.0"
+        vendor: "8086"
+        vfID: 0
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: "0000:11:11.1"
+        vendor: "8086"
+        vfID: 1
+      - deviceID: "1889"
+        driver: iavf
+        mac: a2:76:97:48:2e:9f
+        mtu: 1500
+        name: ens1f2v10
+        pciAddress: "0000:11:12.2"
+        vendor: "8086"
+        vfID: 10
+      - deviceID: "1889"
+        driver: iavf
+        mac: 76:f8:77:30:1c:3a
+        mtu: 1500
+        name: ens1f2v11
+        pciAddress: "0000:11:12.3"
+        vendor: "8086"
+        vfID: 11
+      - deviceID: "1889"
+        driver: iavf
+        mac: ba:64:a4:88:00:4f
+        mtu: 1500
+        name: ens1f2v12
+        pciAddress: "0000:11:12.4"
+        vendor: "8086"
+        vfID: 12
+      - deviceID: "1889"
+        driver: iavf
+        mac: 82:72:e8:15:7a:47
+        mtu: 1500
+        name: ens1f2v13
+        pciAddress: "0000:11:12.5"
+        vendor: "8086"
+        vfID: 13
+      - deviceID: "1889"
+        driver: iavf
+        mac: ea:5f:19:74:1d:27
+        mtu: 1500
+        name: ens1f2v14
+        pciAddress: "0000:11:12.6"
+        vendor: "8086"
+        vfID: 14
+      - deviceID: "1889"
+        driver: iavf
+        mac: 2a:87:b5:01:66:e1
+        mtu: 1500
+        name: ens1f2v15
+        pciAddress: "0000:11:12.7"
+        vendor: "8086"
+        vfID: 15
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: "0000:11:11.2"
+        vendor: "8086"
+        vfID: 2
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: "0000:11:11.3"
+        vendor: "8086"
+        vfID: 3
+      - deviceID: "1889"
+        driver: iavf
+        mac: 3e:d2:91:0e:48:19
+        mtu: 1500
+        name: ens1f2v4
+        pciAddress: "0000:11:11.4"
+        vendor: "8086"
+        vfID: 4
+      - deviceID: "1889"
+        driver: iavf
+        mac: 76:47:78:8a:20:59
+        mtu: 1500
+        name: ens1f2v5
+        pciAddress: "0000:11:11.5"
+        vendor: "8086"
+        vfID: 5
+      - deviceID: "1889"
+        driver: iavf
+        mac: a6:ff:0d:55:18:9b
+        mtu: 1500
+        name: ens1f2v6
+        pciAddress: "0000:11:11.6"
+        vendor: "8086"
+        vfID: 6
+      - deviceID: "1889"
+        driver: iavf
+        mac: a6:eb:a6:12:95:7e
+        mtu: 1500
+        name: ens1f2v7
+        pciAddress: "0000:11:11.7"
+        vendor: "8086"
+        vfID: 7
+      - deviceID: "1889"
+        driver: iavf
+        mac: 42:b0:c1:e1:6f:19
+        mtu: 1500
+        name: ens1f2v8
+        pciAddress: "0000:11:12.0"
+        vendor: "8086"
+        vfID: 8
+      - deviceID: "1889"
+        driver: iavf
+        mac: 52:0f:da:0d:f5:d4
+        mtu: 1500
+        name: ens1f2v9
+        pciAddress: "0000:11:12.1"
+        vendor: "8086"
+        vfID: 9
+      deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9f:5a
+      mtu: 1500
+      name: ens1f2
+      numVfs: 16
+      pciAddress: "0000:11:00.2"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:9f:5b
+      mtu: 1500
+      name: ens1f3
+      pciAddress: "0000:11:00.3"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 10000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:08:f4
+      mtu: 1500
+      name: ens4f0
+      pciAddress: 0000:85:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:08:f5
+      mtu: 1500
+      name: ens4f1
+      pciAddress: 0000:85:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - Vfs:
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:85:11.0
+        vendor: "8086"
+        vfID: 0
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:85:11.1
+        vendor: "8086"
+        vfID: 1
+      - deviceID: "1889"
+        driver: iavf
+        mac: 0e:b1:14:1a:35:d1
+        mtu: 1500
+        name: ens4f2v10
+        pciAddress: 0000:85:12.2
+        vendor: "8086"
+        vfID: 10
+      - deviceID: "1889"
+        driver: iavf
+        mac: ca:e2:20:fd:6b:1f
+        mtu: 1500
+        name: ens4f2v11
+        pciAddress: 0000:85:12.3
+        vendor: "8086"
+        vfID: 11
+      - deviceID: "1889"
+        driver: iavf
+        mac: 1a:6a:01:ed:49:4d
+        mtu: 1500
+        name: ens4f2v12
+        pciAddress: 0000:85:12.4
+        vendor: "8086"
+        vfID: 12
+      - deviceID: "1889"
+        driver: iavf
+        mac: 3a:16:b6:f4:19:07
+        mtu: 1500
+        name: ens4f2v13
+        pciAddress: 0000:85:12.5
+        vendor: "8086"
+        vfID: 13
+      - deviceID: "1889"
+        driver: iavf
+        mac: 2e:fe:ff:a3:1b:24
+        mtu: 1500
+        name: ens4f2v14
+        pciAddress: 0000:85:12.6
+        vendor: "8086"
+        vfID: 14
+      - deviceID: "1889"
+        driver: iavf
+        mac: e6:13:e8:1f:85:e8
+        mtu: 1500
+        name: ens4f2v15
+        pciAddress: 0000:85:12.7
+        vendor: "8086"
+        vfID: 15
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:85:11.2
+        vendor: "8086"
+        vfID: 2
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:85:11.3
+        vendor: "8086"
+        vfID: 3
+      - deviceID: "1889"
+        driver: iavf
+        mac: 16:52:1f:2e:24:b4
+        mtu: 1500
+        name: ens4f2v4
+        pciAddress: 0000:85:11.4
+        vendor: "8086"
+        vfID: 4
+      - deviceID: "1889"
+        driver: iavf
+        mac: 82:d9:6d:23:11:86
+        mtu: 1500
+        name: ens4f2v5
+        pciAddress: 0000:85:11.5
+        vendor: "8086"
+        vfID: 5
+      - deviceID: "1889"
+        driver: iavf
+        mac: 06:73:f2:30:ce:50
+        mtu: 1500
+        name: ens4f2v6
+        pciAddress: 0000:85:11.6
+        vendor: "8086"
+        vfID: 6
+      - deviceID: "1889"
+        driver: iavf
+        mac: 2e:92:fd:18:1a:43
+        mtu: 1500
+        name: ens4f2v7
+        pciAddress: 0000:85:11.7
+        vendor: "8086"
+        vfID: 7
+      - deviceID: "1889"
+        driver: iavf
+        mac: 6e:a9:4c:a4:b3:16
+        mtu: 1500
+        name: ens4f2v8
+        pciAddress: 0000:85:12.0
+        vendor: "8086"
+        vfID: 8
+      - deviceID: "1889"
+        driver: iavf
+        mac: 26:05:da:ec:99:57
+        mtu: 1500
+        name: ens4f2v9
+        pciAddress: 0000:85:12.1
+        vendor: "8086"
+        vfID: 9
+      deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:08:f6
+      mtu: 1500
+      name: ens4f2
+      numVfs: 16
+      pciAddress: 0000:85:00.2
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:08:f7
+      mtu: 1500
+      name: ens4f3
+      pciAddress: 0000:85:00.3
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:a0
+      mtu: 1500
+      name: ens7f0
+      pciAddress: 0000:c0:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:a1
+      mtu: 1500
+      name: ens7f1
+      pciAddress: 0000:c0:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - Vfs:
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:c0:11.0
+        vendor: "8086"
+        vfID: 0
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:c0:11.1
+        vendor: "8086"
+        vfID: 1
+      - deviceID: "1889"
+        driver: iavf
+        mac: 8a:34:b4:1e:cd:7a
+        mtu: 1500
+        name: ens7f2v10
+        pciAddress: 0000:c0:12.2
+        vendor: "8086"
+        vfID: 10
+      - deviceID: "1889"
+        driver: iavf
+        mac: 62:f7:d2:39:57:f4
+        mtu: 1500
+        name: ens7f2v11
+        pciAddress: 0000:c0:12.3
+        vendor: "8086"
+        vfID: 11
+      - deviceID: "1889"
+        driver: iavf
+        mac: aa:38:fa:a5:d9:61
+        mtu: 1500
+        name: ens7f2v12
+        pciAddress: 0000:c0:12.4
+        vendor: "8086"
+        vfID: 12
+      - deviceID: "1889"
+        driver: iavf
+        mac: 22:8e:3e:64:2e:b1
+        mtu: 1500
+        name: ens7f2v13
+        pciAddress: 0000:c0:12.5
+        vendor: "8086"
+        vfID: 13
+      - deviceID: "1889"
+        driver: iavf
+        mac: 0e:26:af:9f:b5:b6
+        mtu: 1500
+        name: ens7f2v14
+        pciAddress: 0000:c0:12.6
+        vendor: "8086"
+        vfID: 14
+      - deviceID: "1889"
+        driver: iavf
+        mac: 5e:39:52:a3:36:15
+        mtu: 1500
+        name: ens7f2v15
+        pciAddress: 0000:c0:12.7
+        vendor: "8086"
+        vfID: 15
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:c0:11.2
+        vendor: "8086"
+        vfID: 2
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:c0:11.3
+        vendor: "8086"
+        vfID: 3
+      - deviceID: "1889"
+        driver: iavf
+        mac: be:2a:3e:78:75:09
+        mtu: 1500
+        name: ens7f2v4
+        pciAddress: 0000:c0:11.4
+        vendor: "8086"
+        vfID: 4
+      - deviceID: "1889"
+        driver: iavf
+        mac: ce:0d:8f:16:9e:30
+        mtu: 1500
+        name: ens7f2v5
+        pciAddress: 0000:c0:11.5
+        vendor: "8086"
+        vfID: 5
+      - deviceID: "1889"
+        driver: iavf
+        mac: b6:fd:b0:e4:b3:b8
+        mtu: 1500
+        name: ens7f2v6
+        pciAddress: 0000:c0:11.6
+        vendor: "8086"
+        vfID: 6
+      - deviceID: "1889"
+        driver: iavf
+        mac: 8e:61:7a:19:62:d0
+        mtu: 1500
+        name: ens7f2v7
+        pciAddress: 0000:c0:11.7
+        vendor: "8086"
+        vfID: 7
+      - deviceID: "1889"
+        driver: iavf
+        mac: 6e:a1:a4:d6:2f:5e
+        mtu: 1500
+        name: ens7f2v8
+        pciAddress: 0000:c0:12.0
+        vendor: "8086"
+        vfID: 8
+      - deviceID: "1889"
+        driver: iavf
+        mac: 66:dd:9c:1a:fb:0d
+        mtu: 1500
+        name: ens7f2v9
+        pciAddress: 0000:c0:12.1
+        vendor: "8086"
+        vfID: 9
+      deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:a2
+      mtu: 1500
+      name: ens7f2
+      numVfs: 16
+      pciAddress: 0000:c0:00.2
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:09:a3
+      mtu: 1500
+      name: ens7f3
+      pciAddress: 0000:c0:00.3
+      totalvfs: 64
+      vendor: "8086"
+    syncStatus: Succeeded
+    system:
+      rdmaMode: shared
+- apiVersion: sriovnetwork.openshift.io/v1
+  kind: SriovNetworkNodeState
+  metadata:
+    annotations:
+      sriovnetwork.openshift.io/current-state: Idle
+      sriovnetwork.openshift.io/desired-state: Idle
+    creationTimestamp: "2025-10-10T10:55:35Z"
+    generation: 2
+    name: master2.lab4.srib-lab-ocp.lan
+    namespace: openshift-sriov-network-operator
+    ownerReferences:
+    - apiVersion: sriovnetwork.openshift.io/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: SriovOperatorConfig
+      name: default
+      uid: b8188c90-e14c-49b9-bb85-a8bb03b4c88b
+    resourceVersion: "369165"
+    uid: 2e0fd768-f850-4008-836f-941036a755d4
+  spec:
+    bridges: {}
+    interfaces:
+    - name: ens1f2
+      numVfs: 16
+      pciAddress: "0000:11:00.2"
+      vfGroups:
+      - deviceType: vfio-pci
+        policyName: policy-ens1f2-bh0u
+        resourceName: pci_sriov_net_bh0u
+        vfRange: 0-3
+      - deviceType: netdevice
+        policyName: policy-ens1f2-bh0c
+        resourceName: pci_sriov_net_bh0c
+        vfRange: 4-8
+    - name: ens3f2
+      numVfs: 16
+      pciAddress: 0000:0f:00.2
+      vfGroups:
+      - deviceType: vfio-pci
+        policyName: policy-ens3f2-bh0u-1
+        resourceName: pci_sriov_net_bh0u_1
+        vfRange: 0-3
+      - deviceType: netdevice
+        policyName: policy-ens3f2-bh0c-1
+        resourceName: pci_sriov_net_bh0c_1
+        vfRange: 4-8
+    - name: ens4f2
+      numVfs: 16
+      pciAddress: 0000:85:00.2
+      vfGroups:
+      - deviceType: vfio-pci
+        policyName: policy-ens4f2-bh0u-2
+        resourceName: pci_sriov_net_bh0u_2
+        vfRange: 0-3
+    - name: ens7f2
+      numVfs: 16
+      pciAddress: 0000:c0:00.2
+      vfGroups:
+      - deviceType: vfio-pci
+        policyName: policy-ens7f2-bh0u-2-1
+        resourceName: pci_sriov_net_bh0u_2_1
+        vfRange: 0-3
+    system: {}
+  status:
+    bridges: {}
+    interfaces:
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:62:d5:88
+      mtu: 1500
+      name: ens3f0
+      pciAddress: 0000:0f:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:62:d5:89
+      mtu: 1500
+      name: ens3f1
+      pciAddress: 0000:0f:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - Vfs:
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:0f:11.0
+        vendor: "8086"
+        vfID: 0
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:0f:11.1
+        vendor: "8086"
+        vfID: 1
+      - deviceID: "1889"
+        driver: iavf
+        mac: 86:00:73:3c:61:ef
+        mtu: 1500
+        name: ens3f2v10
+        pciAddress: 0000:0f:12.2
+        vendor: "8086"
+        vfID: 10
+      - deviceID: "1889"
+        driver: iavf
+        mac: da:71:a7:39:c2:cd
+        mtu: 1500
+        name: ens3f2v11
+        pciAddress: 0000:0f:12.3
+        vendor: "8086"
+        vfID: 11
+      - deviceID: "1889"
+        driver: iavf
+        mac: 36:ed:da:b1:d3:f4
+        mtu: 1500
+        name: ens3f2v12
+        pciAddress: 0000:0f:12.4
+        vendor: "8086"
+        vfID: 12
+      - deviceID: "1889"
+        driver: iavf
+        mac: fe:1d:c9:11:80:93
+        mtu: 1500
+        name: ens3f2v13
+        pciAddress: 0000:0f:12.5
+        vendor: "8086"
+        vfID: 13
+      - deviceID: "1889"
+        driver: iavf
+        mac: 26:a6:f0:31:c5:a8
+        mtu: 1500
+        name: ens3f2v14
+        pciAddress: 0000:0f:12.6
+        vendor: "8086"
+        vfID: 14
+      - deviceID: "1889"
+        driver: iavf
+        mac: 2e:66:4a:88:e5:3f
+        mtu: 1500
+        name: ens3f2v15
+        pciAddress: 0000:0f:12.7
+        vendor: "8086"
+        vfID: 15
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:0f:11.2
+        vendor: "8086"
+        vfID: 2
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:0f:11.3
+        vendor: "8086"
+        vfID: 3
+      - deviceID: "1889"
+        driver: iavf
+        mac: 3e:c9:8c:93:d1:d6
+        mtu: 1500
+        name: ens3f2v4
+        pciAddress: 0000:0f:11.4
+        vendor: "8086"
+        vfID: 4
+      - deviceID: "1889"
+        driver: iavf
+        mac: 76:96:85:84:5a:c9
+        mtu: 1500
+        name: ens3f2v5
+        pciAddress: 0000:0f:11.5
+        vendor: "8086"
+        vfID: 5
+      - deviceID: "1889"
+        driver: iavf
+        mac: 7a:eb:ba:50:1e:ce
+        mtu: 1500
+        name: ens3f2v6
+        pciAddress: 0000:0f:11.6
+        vendor: "8086"
+        vfID: 6
+      - deviceID: "1889"
+        driver: iavf
+        mac: 96:6e:db:ca:46:32
+        mtu: 1500
+        name: ens3f2v7
+        pciAddress: 0000:0f:11.7
+        vendor: "8086"
+        vfID: 7
+      - deviceID: "1889"
+        driver: iavf
+        mac: 32:6d:69:5a:50:87
+        mtu: 1500
+        name: ens3f2v8
+        pciAddress: 0000:0f:12.0
+        vendor: "8086"
+        vfID: 8
+      - deviceID: "1889"
+        driver: iavf
+        mac: fe:67:a3:0f:67:5e
+        mtu: 1500
+        name: ens3f2v9
+        pciAddress: 0000:0f:12.1
+        vendor: "8086"
+        vfID: 9
+      deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:62:d5:8a
+      mtu: 1500
+      name: ens3f2
+      numVfs: 16
+      pciAddress: 0000:0f:00.2
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:62:d5:8b
+      mtu: 1500
+      name: ens3f3
+      pciAddress: 0000:0f:00.3
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:98:d0
+      mtu: 8500
+      name: ens1f0
+      pciAddress: "0000:11:00.0"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:98:d1
+      mtu: 1500
+      name: ens1f1
+      pciAddress: "0000:11:00.1"
+      totalvfs: 64
+      vendor: "8086"
+    - Vfs:
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: "0000:11:11.0"
+        vendor: "8086"
+        vfID: 0
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: "0000:11:11.1"
+        vendor: "8086"
+        vfID: 1
+      - deviceID: "1889"
+        driver: iavf
+        mac: 86:8d:bb:03:b4:f3
+        mtu: 1500
+        name: ens1f2v10
+        pciAddress: "0000:11:12.2"
+        vendor: "8086"
+        vfID: 10
+      - deviceID: "1889"
+        driver: iavf
+        mac: 7a:60:aa:24:52:f8
+        mtu: 1500
+        name: ens1f2v11
+        pciAddress: "0000:11:12.3"
+        vendor: "8086"
+        vfID: 11
+      - deviceID: "1889"
+        driver: iavf
+        mac: 26:c8:26:85:c1:05
+        mtu: 1500
+        name: ens1f2v12
+        pciAddress: "0000:11:12.4"
+        vendor: "8086"
+        vfID: 12
+      - deviceID: "1889"
+        driver: iavf
+        mac: a6:8b:a0:05:08:fe
+        mtu: 1500
+        name: ens1f2v13
+        pciAddress: "0000:11:12.5"
+        vendor: "8086"
+        vfID: 13
+      - deviceID: "1889"
+        driver: iavf
+        mac: f6:03:86:b0:52:ef
+        mtu: 1500
+        name: ens1f2v14
+        pciAddress: "0000:11:12.6"
+        vendor: "8086"
+        vfID: 14
+      - deviceID: "1889"
+        driver: iavf
+        mac: 66:62:c1:72:c8:63
+        mtu: 1500
+        name: ens1f2v15
+        pciAddress: "0000:11:12.7"
+        vendor: "8086"
+        vfID: 15
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: "0000:11:11.2"
+        vendor: "8086"
+        vfID: 2
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: "0000:11:11.3"
+        vendor: "8086"
+        vfID: 3
+      - deviceID: "1889"
+        driver: iavf
+        mac: d6:0a:03:1c:41:ea
+        mtu: 1500
+        name: ens1f2v4
+        pciAddress: "0000:11:11.4"
+        vendor: "8086"
+        vfID: 4
+      - deviceID: "1889"
+        driver: iavf
+        mac: 4a:f2:e0:49:69:c9
+        mtu: 1500
+        name: ens1f2v5
+        pciAddress: "0000:11:11.5"
+        vendor: "8086"
+        vfID: 5
+      - deviceID: "1889"
+        driver: iavf
+        mac: 22:08:14:8e:d5:7b
+        mtu: 1500
+        name: ens1f2v6
+        pciAddress: "0000:11:11.6"
+        vendor: "8086"
+        vfID: 6
+      - deviceID: "1889"
+        driver: iavf
+        mac: 56:b3:3b:54:1f:03
+        mtu: 1500
+        name: ens1f2v7
+        pciAddress: "0000:11:11.7"
+        vendor: "8086"
+        vfID: 7
+      - deviceID: "1889"
+        driver: iavf
+        mac: 12:01:5b:71:98:54
+        mtu: 1500
+        name: ens1f2v8
+        pciAddress: "0000:11:12.0"
+        vendor: "8086"
+        vfID: 8
+      - deviceID: "1889"
+        driver: iavf
+        mac: 52:ed:d4:d9:b3:25
+        mtu: 1500
+        name: ens1f2v9
+        pciAddress: "0000:11:12.1"
+        vendor: "8086"
+        vfID: 9
+      deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:98:d2
+      mtu: 1500
+      name: ens1f2
+      numVfs: 16
+      pciAddress: "0000:11:00.2"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: -1 Mb/s
+      linkType: ETH
+      mac: 50:7c:6f:4b:98:d3
+      mtu: 1500
+      name: ens1f3
+      pciAddress: "0000:11:00.3"
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:00:0c
+      mtu: 1500
+      name: ens4f0
+      pciAddress: 0000:85:00.0
+      totalvfs: 64
+      vendor: "8086"
+    - deviceID: "1593"
+      driver: ice
+      eSwitchMode: legacy
+      linkAdminState: up
+      linkSpeed: 25000 Mb/s
+      linkType: ETH
+      mac: 6c:fe:54:63:00:0d
+      mtu: 1500
+      name: ens4f1
+      pciAddress: 0000:85:00.1
+      totalvfs: 64
+      vendor: "8086"
+    - Vfs:
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:85:11.0
+        vendor: "8086"
+        vfID: 0
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:85:11.1
+        vendor: "8086"
+        vfID: 1
+      - deviceID: "1889"
+        driver: iavf
+        mac: c6:7b:aa:1b:24:3d
+        mtu: 1500
+        name: ens4f2v10
+        pciAddress: 0000:85:12.2
+        vendor: "8086"
+        vfID: 10
+      - deviceID: "1889"
+        driver: iavf
+        mac: 2e:56:2e:72:a0:6b
+        mtu: 1500
+        name: ens4f2v11
+        pciAddress: 0000:85:12.3
+        vendor: "8086"
+        vfID: 11
+      - deviceID: "1889"
+        driver: iavf
+        mac: 3a:83:94:10:f6:74
+        mtu: 1500
+        name: ens4f2v12
+        pciAddress: 0000:85:12.4
+        vendor: "8086"
+        vfID: 12
+      - deviceID: "1889"
+        driver: iavf
+        mac: b6:9e:57:41:e7:38
+        mtu: 1500
+        name: ens4f2v13
+        pciAddress: 0000:85:12.5
+        vendor: "8086"
+        vfID: 13
+      - deviceID: "1889"
+        driver: iavf
+        mac: 4a:30:df:4c:20:6a
+        mtu: 1500
+        name: ens4f2v14
+        pciAddress: 0000:85:12.6
+        vendor: "8086"
+        vfID: 14
+      - deviceID: "1889"
+        driver: iavf
+        mac: 66:2f:ba:1d:f7:88
+        mtu: 1500
+        name: ens4f2v15
+        pciAddress: 0000:85:12.7
+        vendor: "8086"
+        vfID: 15
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:85:11.2
+        vendor: "8086"
+        vfID: 2
+      - deviceID: "1889"
+        driver: vfio-pci
+        pciAddress: 0000:85:11.3
+        vendor: "8086"
+        vfID: 3
+      - deviceID: "1889"
+        driver: iavf
+        mac: b6:c2:db:04:f1:2e
+        mtu: 1500
+        name: ens4f2v4
+        pciAddress: 0000:85:11.4
+        vendor: "8086"
+      
