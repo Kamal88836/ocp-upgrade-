@@ -1,0 +1,369 @@
+# Runbook: Recovering from Loss of Two Control-Plane Nodes (etcd Quorum Loss)
+## OpenShift 4.20 · Bare Metal · Unmanaged BareMetalHosts
+
+| Item | Value |
+|---|---|
+| Cluster | `3novvt` (`*.3novvt.samsungcnfcu.local`) |
+| OCP version | 4.20.21 |
+| Platform | BareMetal, BMH `unmanaged` (no BMC credentials), Machine API objects present |
+| Control-plane nodes | `master01`, `master02`, `master03` |
+| Machines | `3novvt-csrrj-master-0`, `-master-1`, `-master-2` (namespace `openshift-machine-api`) |
+| Bastion / `oc` host | `bastion02` |
+| Scenario | **Two** control-plane nodes failed. One node still has an intact OS disk and etcd data. |
+| Companion document | *OCP4-Control-Plane-Node-Replacement-Runbook.md* (single-node replacement) — referenced below as **Runbook A** |
+| Expected duration | 2–3 hours (10 min to restore API; the rest is rebuilding two nodes sequentially) |
+| Impact | Until Phase 1 completes the API is read-only or down; workloads already running keep running. Writes made in the last seconds before failure may be lost. |
+
+Throughout this document the examples assume **master03 survived** and **master01 + master02 failed**. Swap names to match reality.
+
+---
+
+## 0. Decision tree — confirm this is the right procedure
+
+```
+How many control-plane nodes are healthy (OS boots, disk intact)?
+│
+├─ 2 healthy, 1 failed ──────────────► Use Runbook A (single-node replacement). STOP here.
+│
+├─ 1 healthy, 2 failed ──────────────► THIS RUNBOOK (quorum-restore.sh).
+│
+└─ 0 healthy ────────────────────────► Appendix B (rebuild one master, restore from etcd snapshot
+                                        with cluster-restore.sh). Requires a prior backup.
+```
+
+Checks to classify the state (run from bastion02; the API may be slow or read-only):
+
+```bash
+oc get nodes                                   # may time out — that is itself a sign of quorum loss
+oc get pods -n openshift-etcd -l app=etcd --field-selector=status.phase==Running -o wide
+ping -c2 master01.3novvt.samsungcnfcu.local
+ping -c2 master02.3novvt.samsungcnfcu.local
+ping -c2 master03.3novvt.samsungcnfcu.local
+ssh core@master03.3novvt.samsungcnfcu.local 'sudo crictl ps | grep etcd; sudo ls /var/lib/etcd/member'
+```
+
+If `oc` commands hang entirely, use the surviving node directly:
+
+```bash
+ssh core@master03.3novvt.samsungcnfcu.local
+sudo -i
+export KUBECONFIG=/etc/kubernetes/static-pod-resources/kube-apiserver-certs/secrets/node-kubeconfigs/localhost.kubeconfig
+oc get nodes
+```
+
+---
+
+## 1. Pre-flight checklist
+
+- [ ] Exactly **one** control-plane node is up and its `/var/lib/etcd/member` directory exists and is non-empty.
+- [ ] The two failed nodes are **powered off or fenced** and will stay off until Phase 2. Rebooting one of them mid-procedure can create a split etcd cluster.
+- [ ] SSH as `core` to the surviving node works (`ssh core@master03…`).
+- [ ] Replacement hardware (or repaired servers) for the two failed nodes is available with the **same hostnames and IPs**. Note whether NIC MACs changed.
+- [ ] Out-of-band console / virtual-media access to both failed hosts.
+- [ ] Original network keyfiles (`m1-*.nmconnection`, `m2-*.nmconnection`) are on the bastion.
+- [ ] Bastion can download a 4.20 RHCOS live ISO and `coreos-installer` (or they are already cached from Runbook A).
+- [ ] Incident / change record opened; stakeholders informed that the API is unavailable until Phase 1 completes.
+
+Capture evidence before changing anything:
+
+```bash
+date -u
+oc get clusterversion 2>&1 | head
+oc get nodes -o wide 2>&1
+oc get machines,bmh -n openshift-machine-api 2>&1
+ssh core@master03.3novvt.samsungcnfcu.local 'sudo crictl ps -a | grep -E "etcd|kube-apiserver"'
+```
+
+---
+
+## 2. Phase 1 — Restore etcd quorum on the surviving node
+
+### 2.1 Choose the recovery node
+
+With only one node alive there is no choice: the survivor is the recovery node. If, unexpectedly, more than one etcd pod is reachable, pick the member with the **highest Raft index** that is **not** a learner:
+
+```bash
+oc exec -n openshift-etcd <etcd-pod> -c etcdctl -- etcdctl endpoint status -w table
+```
+
+### 2.2 Snapshot the surviving data (best effort — do not skip if it works)
+
+```bash
+ssh core@master03.3novvt.samsungcnfcu.local
+sudo -i
+mkdir -p /home/core/assets/pre-quorum-restore
+cp -a /var/lib/etcd/member /home/core/assets/pre-quorum-restore/member-$(date +%F-%H%M)
+ls -l /home/core/assets/pre-quorum-restore/
+```
+
+This raw copy is your fallback if the restore script misbehaves.
+
+### 2.3 Run the quorum-restore script
+
+Still on master03 as root:
+
+```bash
+sudo -E /usr/local/bin/quorum-restore.sh
+```
+
+What it does: stops the etcd static pod, rewrites the local member as a brand-new single-member cluster (new cluster ID, old peers invalidated) using the existing data directory, and restarts etcd. Typical runtime 2–5 minutes. Watch the output for `etcd container is running` / completion messages.
+
+```bash
+exit   # leave root
+exit   # leave SSH
+```
+
+### 2.4 Confirm the API is back in read/write mode (from bastion02)
+
+```bash
+# can take 3–10 minutes
+watch -n 10 'oc get nodes; echo; oc get pods -n openshift-etcd -l app=etcd'
+```
+
+Expected:
+
+- `oc get nodes` returns quickly; master03 `Ready`, master01/master02 `NotReady`.
+- Exactly one `etcd-master03…` pod `Running` (4/4).
+- A write works:
+
+  ```bash
+  oc create configmap quorum-test -n default && oc delete configmap quorum-test -n default
+  ```
+
+Operators will be Degraded (1 of 3 members). That is expected until Phase 2 is done.
+
+```bash
+oc get co etcd kube-apiserver kube-controller-manager kube-scheduler
+oc rsh -n openshift-etcd etcd-master03.3novvt.samsungcnfcu.local etcdctl member list -w table   # 1 member
+```
+
+> **Checkpoint 1 reached:** cluster is single-master but writable. Workload impact is over; the rest of the procedure restores HA.
+
+---
+
+## 3. Phase 2 — Rebuild the two failed control-plane nodes (one at a time)
+
+Do **master01 first, fully, then master02**. Parallel rebuilds make failures impossible to attribute and risk the etcd operator adding two members at once.
+
+> Never delete or re-create the Machine/Node of the **recovery host (master03)**.
+
+### 3.1 Clean up cluster objects for the failed node
+
+(`<NODE>` = `master01.3novvt.samsungcnfcu.local`, `<MACHINE>` = `3novvt-csrrj-master-0`)
+
+```bash
+NODE=master01.3novvt.samsungcnfcu.local
+MACHINE=3novvt-csrrj-master-0
+
+# etcd secrets for the dead member (operator will not re-add a same-named member while these exist)
+oc delete secret -n openshift-etcd etcd-peer-$NODE etcd-serving-$NODE etcd-serving-metrics-$NODE --ignore-not-found
+oc get secrets -n openshift-etcd | grep $NODE          # must be empty
+
+# Node, then Machine (Node first, or the Machine delete hangs on drain)
+oc delete node $NODE
+oc delete machine $MACHINE -n openshift-machine-api
+```
+
+If the Machine delete hangs > 2 minutes:
+
+```bash
+oc annotate machine $MACHINE -n openshift-machine-api machine.openshift.io/exclude-node-draining=true
+```
+
+Verify the BareMetalHost was released and (if hardware changed) fix the MAC:
+
+```bash
+oc get bmh $NODE -n openshift-machine-api -o jsonpath='consumerRef={.spec.consumerRef}{"\n"}bootMAC={.spec.bootMACAddress}{"\n"}'
+# consumerRef must be empty
+# oc patch bmh $NODE -n openshift-machine-api --type=merge -p '{"spec":{"bootMACAddress":"<NEW_MAC>"}}'
+```
+
+No `etcdctl member remove` is required in this scenario — the quorum-restore script already discarded the old membership.
+
+### 3.2 Re-create the Machine object
+
+```bash
+oc get machine 3novvt-csrrj-master-2 -n openshift-machine-api -o yaml > $MACHINE.yaml
+```
+
+Edit `$MACHINE.yaml`:
+
+1. `metadata.name: 3novvt-csrrj-master-0`
+2. Remove `status:` entirely.
+3. Remove `spec.providerID`.
+4. Remove `metadata.uid`, `resourceVersion`, `creationTimestamp`, `generation`, `annotations`, `finalizers`.
+5. Keep `metadata.labels` and `spec.providerSpec`.
+
+```bash
+oc apply -f $MACHINE.yaml
+sleep 30
+oc get machine $MACHINE -n openshift-machine-api                                   # Provisioning
+oc get bmh $NODE -n openshift-machine-api -o jsonpath='{.spec.consumerRef.name}{"\n"}'   # 3novvt-csrrj-master-0
+```
+
+### 3.3 Build the ISO for this node (on bastion02)
+
+```bash
+mkdir -p ~/cp-rebuild && cd ~/cp-rebuild
+
+# fresh master ignition from the cluster — never the one from the original install dir
+oc extract -n openshift-machine-api secret/master-user-data-managed --keys=userData --to=- > master.ign
+python3 -m json.tool master.ign >/dev/null && echo "ignition OK"
+
+# 4.20 live ISO (once) — URL from: openshift-install coreos print-stream-json | grep '\.iso[^.]'
+[ -f rhcos-4.20-live.x86_64.iso ] || wget <ISO_URL> -O rhcos-4.20-live.x86_64.iso
+[ -x coreos-installer ] || { wget https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/coreos-installer/latest/coreos-installer_amd64 -O coreos-installer; chmod +x coreos-installer; }
+
+# master01 — single NIC example (use bond + port keyfiles if that host used a bond)
+./coreos-installer iso customize --dest-device /dev/sda \
+  --dest-ignition master.ign \
+  --network-keyfile m1-<IFNAME>.nmconnection \
+  -o master01-rebuild.iso rhcos-4.20-live.x86_64.iso
+```
+
+Keyfile checks: same interface name, IP, prefix, gateway, DNS, MTU, and the static route to the subnet where HAProxy/`api-int` lives. Confirm `/dev/sda` is the OS disk on the target host (`lsblk` from the plain live ISO if unsure — `--dest-device` wipes it without prompting).
+
+### 3.4 Install the node
+
+1. Attach `master01-rebuild.iso` via virtual media, boot from it.
+2. Unattended install → reboot. **Eject the ISO.**
+3. First disk boot pulls full config from `api-int…:22623`, pivots to the 4.20.21 OS image, reboots again (10–20 min).
+
+Monitor:
+
+```bash
+watch -n 15 'oc get csr | grep -i pending; echo; oc get nodes'
+```
+
+### 3.5 Approve CSRs (two rounds)
+
+```bash
+oc get csr -o name | xargs oc adm certificate approve
+# wait ~2 min
+oc get csr -o name | xargs oc adm certificate approve
+oc get nodes          # master01 Ready, roles control-plane,master
+```
+
+### 3.6 Wait for etcd to add the member before touching the next node
+
+```bash
+watch -n 20 'oc rsh -n openshift-etcd etcd-master03.3novvt.samsungcnfcu.local etcdctl member list -w table 2>/dev/null; echo; oc get pods -n openshift-etcd -l app=etcd -o wide'
+```
+
+Proceed only when the member list shows **2 started members** and the `etcd-master01…` pod is `Running` (allow up to 15 min). If stuck, see §5.
+
+> **Checkpoint 2 reached:** two healthy masters, quorum (2/2) restored.
+
+### 3.7 Repeat §3.1–3.6 for master02
+
+```bash
+NODE=master02.3novvt.samsungcnfcu.local
+MACHINE=3novvt-csrrj-master-1
+```
+
+Keyfile `m2-<IFNAME>.nmconnection`, ISO name `master02-rebuild.iso`. Wait for **3 started members** at the end.
+
+---
+
+## 4. Phase 3 — Final verification
+
+```bash
+oc get nodes -o wide                                   # 3 masters Ready
+oc get machines,bmh -n openshift-machine-api           # all 3 machines Running, BMH consumers set
+oc rsh -n openshift-etcd etcd-master03.3novvt.samsungcnfcu.local etcdctl member list -w table     # 3 started
+oc rsh -n openshift-etcd etcd-master03.3novvt.samsungcnfcu.local etcdctl endpoint health --cluster
+oc get co etcd kube-apiserver kube-controller-manager kube-scheduler   # DEGRADED False on all
+oc get co                                               # nothing Degraded / Progressing
+oc get mcp master                                       # 3/3 ready, not degraded
+oc get clusterversion                                   # Progressing False
+oc adm wait-for-stable-cluster --minimum-stable-period=5m
+```
+
+Load balancer: re-enable master01 and master02 in HAProxy backends for **6443** and **22623** (and 80/443 if ingress is on masters). Confirm health checks are green:
+
+```bash
+echo "show stat" | sudo socat stdio /var/run/haproxy/admin.sock | grep -E 'master0[12]'
+```
+
+Data-loss check: because quorum was rebuilt from one member's local data, writes in flight at the moment of failure can be missing. Spot-check anything created/changed in the last ~10 minutes before the outage (deployments, secrets, routes, PVCs) and re-apply from Git/CI if needed.
+
+Fresh backup after recovery:
+
+```bash
+oc debug node/master03.3novvt.samsungcnfcu.local -- chroot /host /usr/local/bin/cluster-backup.sh /home/core/assets/backup
+```
+
+---
+
+## 5. Troubleshooting
+
+| Symptom | Likely cause | Action |
+|---|---|---|
+| `quorum-restore.sh` exits with error about etcd container | Script needs the etcd static pod present | `sudo crictl ps -a \| grep etcd`; check `/etc/kubernetes/manifests/etcd-pod.yaml` exists; rerun with `sudo -E`. |
+| API still read-only / timeouts 10 min after script | etcd came up but kube-apiserver not restarted | On master03: `sudo crictl ps \| grep kube-apiserver`; if absent, `sudo systemctl restart kubelet`. |
+| Rebuilt node Ready but etcd stays at previous member count | Leftover `etcd-*-<node>` secret, or node name differs from FQDN | Re-run §3.1 secret deletion; compare `oc get nodes` name with BMH/keyfile hostname; check `oc logs -n openshift-etcd-operator deploy/etcd-operator`. |
+| etcd operator idle, no new revision | Rollout not triggered | `oc patch etcd cluster -p='{"spec":{"forceRedeploymentReason":"recovery-'"$(date --rfc-3339=ns)"'"}}' --type=merge` |
+| Rebuilt node stuck fetching ignition (22623) | Route/DNS/LB | From live ISO shell: `curl -kI https://api-int.3novvt.samsungcnfcu.local:22623/healthz`; verify HAProxy backend master03 is UP for 22623. |
+| No CSRs appear for the new node | Node cannot reach 6443, or Machine object missing | Verify §3.2 Machine exists; `curl -k https://api-int…:6443/healthz` from the node console. |
+| Machine stays `Provisioning` after node is Ready | Node not linked to BMH (MAC mismatch) | Compare node MAC/IP with `bmh.spec.bootMACAddress`; patch and wait. |
+| kube-apiserver `NodeInstallerDegraded` for a while | Static-pod revisions rolling out | Normal; wait for installer pods in `openshift-kube-apiserver` to complete. |
+| A failed node was accidentally powered on with its old disk | Old member tries to rejoin old cluster ID | Power it off immediately; it will be rejected anyway (cluster ID changed) but must be reinstalled from ISO — never let its old etcd data rejoin. |
+
+---
+
+## 6. Completion checklist
+
+- [ ] Phase 1: `quorum-restore.sh` run on master03; API writable
+- [ ] master01 rebuilt, CSRs approved, etcd member started
+- [ ] master02 rebuilt, CSRs approved, etcd member started
+- [ ] `etcdctl member list` = 3 started
+- [ ] All cluster operators Available / not Degraded
+- [ ] `oc get mcp master` 3/3
+- [ ] HAProxy backends re-enabled (6443, 22623)
+- [ ] Data-loss spot check done; missing objects re-applied
+- [ ] New etcd backup taken and copied off-cluster
+- [ ] ISO/ignition files removed from shared storage (ignition contains cluster credentials)
+- [ ] Incident record updated with timeline, Raft index/data-loss notes, deviations
+
+---
+
+## Appendix A — Quick command card
+
+```bash
+# PHASE 1 (on surviving master, as root)
+cp -a /var/lib/etcd/member /home/core/assets/pre-quorum-restore/
+sudo -E /usr/local/bin/quorum-restore.sh
+
+# PHASE 2 (per failed node, from bastion02)
+NODE=master01.3novvt.samsungcnfcu.local; MACHINE=3novvt-csrrj-master-0
+oc delete secret -n openshift-etcd etcd-peer-$NODE etcd-serving-$NODE etcd-serving-metrics-$NODE --ignore-not-found
+oc delete node $NODE; oc delete machine $MACHINE -n openshift-machine-api
+oc get bmh $NODE -n openshift-machine-api -o jsonpath='{.spec.consumerRef}{"\n"}'     # empty
+oc get machine 3novvt-csrrj-master-2 -n openshift-machine-api -o yaml > $MACHINE.yaml  # edit, apply
+oc extract -n openshift-machine-api secret/master-user-data-managed --keys=userData --to=- > master.ign
+./coreos-installer iso customize --dest-device /dev/sda --dest-ignition master.ign --network-keyfile m1-<IFNAME>.nmconnection -o master01-rebuild.iso rhcos-4.20-live.x86_64.iso
+oc get csr -o name | xargs oc adm certificate approve     # twice
+oc rsh -n openshift-etcd etcd-master03.3novvt.samsungcnfcu.local etcdctl member list -w table
+
+# PHASE 3
+oc get co; oc get mcp master; oc adm wait-for-stable-cluster
+```
+
+## Appendix B — All three control-plane nodes lost (restore from snapshot)
+
+Only if **no** master has an intact etcd data directory. Requires a `snapshot_*.db` + `static_kuberesources_*.tar.gz` pair from a previous `cluster-backup.sh` run.
+
+1. Rebuild **one** master (e.g. master03) from ISO exactly as in §3.3–3.4. It will not join anything yet (no API), but it will boot RHCOS with the master ignition content baked in.
+2. Copy the backup directory to it: `scp -r etcd-backup-<date>/ core@master03…:/home/core/assets/backup/`
+3. On that node: `sudo -E /usr/local/bin/cluster-restore.sh /home/core/assets/backup`
+4. `sudo systemctl restart kubelet`; wait for kube-apiserver to come up; approve CSRs for the node.
+5. Follow the OpenShift 4.20 documentation *"Restoring to a previous cluster state"* for the remaining steps (force redeploy of etcd, kube-apiserver, kube-controller-manager, kube-scheduler; re-create the other two masters; recover expired certificates if the outage was long).
+6. All cluster state after the snapshot time is lost; re-apply from Git/CI.
+
+## Appendix C — References
+
+- OpenShift 4.20 docs → Backup and restore → Disaster recovery → *Restoring etcd quorum for high availability clusters* (`quorum-restore.sh`)
+- OpenShift 4.20 docs → Backup and restore → Disaster recovery → *Restoring to a previous cluster state* (`cluster-restore.sh`)
+- OpenShift 4.20 docs → Backup and restore → *Replacing an unhealthy etcd member*
+- Runbook A — *OCP4-Control-Plane-Node-Replacement-Runbook.md* (single-node replacement; shared ISO-build and Machine/BMH steps)
+- Internal doc: "OCP ISO creation for bootstrap and master nodes" (SRI-Bangalore, Jan 2026)
