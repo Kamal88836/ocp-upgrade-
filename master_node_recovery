@@ -1,0 +1,406 @@
+# Runbook: Replacing a Failed Control-Plane Node (OpenShift 4.20, Bare Metal, Unmanaged BMH)
+
+| Item | Value |
+|---|---|
+| Cluster | `3novvt` (`*.3novvt.samsungcnfcu.local`) |
+| OCP version | 4.20.21 |
+| Platform | BareMetal (agent/UPI-style, BareMetalHosts `unmanaged`, no BMC credentials) |
+| Failed node | `master01.3novvt.samsungcnfcu.local` |
+| Machine object | `3novvt-csrrj-master-0` (namespace `openshift-machine-api`) |
+| BMH object | `master01.3novvt.samsungcnfcu.local` |
+| Healthy nodes | `master02`, `master03` |
+| Bastion / `oc` host | `bastion02` |
+| Expected duration | 60–90 minutes (most of it waiting on install + CSRs) |
+| Impact | Control plane is already degraded (2/3). No additional outage expected if steps are followed in order. |
+
+> **Why this runbook exists.** Because the BareMetalHosts are `unmanaged`, Metal3 cannot reprovision the server. `oc adm node-image create` only supports worker nodes. The node must be reinstalled manually from a customized RHCOS live ISO carrying the cluster's current master ignition; the Machine/BMH objects are then re-linked automatically.
+
+---
+
+## 0. Pre-flight checklist
+
+Tick every item before touching anything.
+
+- [ ] `oc` client version matches the cluster (`oc version` → 4.20.x) and you are logged in as `cluster-admin`.
+- [ ] Only **one** control-plane node is down. `oc get nodes -l node-role.kubernetes.io/master` shows master02 and master03 `Ready`. (If two are down, **stop** — this is a quorum-loss scenario and a different procedure.)
+- [ ] etcd still has quorum: `oc get co etcd` shows `Available=True` even though `Degraded=True`.
+- [ ] No cluster upgrade is intentionally in progress. (`oc get clusterversion` currently reports "Unable to apply 4.20.21 … etcd, kube-apiserver" — that is a symptom of the degraded operators, not a real upgrade, and it clears after recovery.)
+- [ ] Physical/virtual hardware for master01 is available: repaired server, or a replacement with the **same hostname and IP**. Note whether the NIC MAC address changed.
+- [ ] Out-of-band console (iDRAC/iLO/BMC virtual media or KVM) access to master01.
+- [ ] master01's original network keyfile (`m1-ens1f0.nmconnection` or bond variant) is available on the bastion.
+- [ ] Bastion has internet (or mirror) access to download the RHCOS live ISO and `coreos-installer`.
+- [ ] A change window / approval is recorded.
+
+Record current state for the ticket:
+
+```bash
+oc get clusterversion
+oc get nodes -o wide
+oc get co etcd kube-apiserver kube-controller-manager kube-scheduler
+oc get machines,bmh -n openshift-machine-api
+oc get pods -n openshift-etcd -l app=etcd -o wide
+```
+
+---
+
+## 1. Take an etcd backup (on a healthy master)
+
+```bash
+oc debug node/master02.3novvt.samsungcnfcu.local -- \
+  chroot /host /usr/local/bin/cluster-backup.sh /home/core/assets/backup
+```
+
+Verify and copy the backup off the node:
+
+```bash
+oc debug node/master02.3novvt.samsungcnfcu.local -- chroot /host ls -l /home/core/assets/backup
+# Expected: snapshot_<timestamp>.db and static_kuberesources_<timestamp>.tar.gz
+```
+
+Copy both files to the bastion (e.g. `scp core@master02:/home/core/assets/backup/* ./etcd-backup-$(date +%F)/`). **Do not continue without a verified backup.**
+
+---
+
+## 2. Remove the unhealthy etcd member
+
+### 2.1 Identify the dead member
+
+```bash
+oc rsh -n openshift-etcd etcd-master02.3novvt.samsungcnfcu.local
+```
+
+Inside the pod:
+
+```bash
+etcdctl member list -w table
+```
+
+Note the `ID` of the row whose name is `master01.3novvt.samsungcnfcu.local`.
+
+### 2.2 Remove it
+
+```bash
+etcdctl member remove <ID_OF_MASTER01>
+etcdctl member list -w table      # only master02 and master03 remain
+etcdctl endpoint health           # both report healthy
+exit
+```
+
+### 2.3 Delete the dead member's TLS secrets
+
+The etcd operator will not re-add a member of the same name while these exist.
+
+```bash
+oc get secrets -n openshift-etcd | grep master01
+oc delete secret -n openshift-etcd \
+  etcd-peer-master01.3novvt.samsungcnfcu.local \
+  etcd-serving-master01.3novvt.samsungcnfcu.local \
+  etcd-serving-metrics-master01.3novvt.samsungcnfcu.local
+```
+
+Confirm nothing is left:
+
+```bash
+oc get secrets -n openshift-etcd | grep master01   # no output expected
+```
+
+---
+
+## 3. Remove the Node and Machine objects
+
+Order matters: delete the Node first, otherwise the Machine deletion hangs trying to drain a dead node.
+
+```bash
+oc delete node master01.3novvt.samsungcnfcu.local
+oc delete machine 3novvt-csrrj-master-0 -n openshift-machine-api
+```
+
+If the Machine delete hangs for more than ~2 minutes:
+
+```bash
+oc annotate machine 3novvt-csrrj-master-0 -n openshift-machine-api \
+  machine.openshift.io/exclude-node-draining=true
+```
+
+Verify the BareMetalHost has been released (keep the BMH — it is reused):
+
+```bash
+oc get bmh master01.3novvt.samsungcnfcu.local -n openshift-machine-api \
+  -o jsonpath='consumerRef={.spec.consumerRef}{"\n"}bootMAC={.spec.bootMACAddress}{"\n"}'
+```
+
+- `consumerRef` must be empty (or `null`).
+- If the physical server/NIC was replaced and the MAC changed, update it now (this is how the new node is matched back to the BMH):
+
+  ```bash
+  oc patch bmh master01.3novvt.samsungcnfcu.local -n openshift-machine-api \
+    --type=merge -p '{"spec":{"bootMACAddress":"<NEW_MAC>"}}'
+  ```
+
+---
+
+## 4. Recreate the Machine object
+
+Copy a healthy master's Machine as a template:
+
+```bash
+oc get machine 3novvt-csrrj-master-1 -n openshift-machine-api -o yaml > master-0-new.yaml
+```
+
+Edit `master-0-new.yaml`:
+
+1. Set `metadata.name: 3novvt-csrrj-master-0`.
+2. Delete the whole `status:` section.
+3. Delete `spec.providerID`.
+4. Delete `metadata.uid`, `metadata.resourceVersion`, `metadata.creationTimestamp`, `metadata.generation`, `metadata.annotations`, `metadata.finalizers`.
+5. Leave `metadata.labels` (role/type/cluster labels) and `spec.providerSpec` as they are.
+
+Apply and confirm it claims the free BMH:
+
+```bash
+oc apply -f master-0-new.yaml
+sleep 30
+oc get machine 3novvt-csrrj-master-0 -n openshift-machine-api     # PHASE: Provisioning (expected until node joins)
+oc get bmh master01.3novvt.samsungcnfcu.local -n openshift-machine-api \
+  -o jsonpath='{.spec.consumerRef.name}{"\n"}'                   # 3novvt-csrrj-master-0
+```
+
+---
+
+## 5. Build the replacement ISO (on the bastion)
+
+### 5.1 Extract the current master ignition from the cluster
+
+Do **not** reuse the `master.ign` from the original install directory; it is ~15 months old.
+
+```bash
+mkdir -p ~/master01-replace && cd ~/master01-replace
+oc extract -n openshift-machine-api secret/master-user-data-managed --keys=userData --to=- > master01-new.ign
+python3 -m json.tool master01-new.ign >/dev/null && echo "ignition JSON OK"
+```
+
+### 5.2 Download a 4.20 RHCOS live ISO and coreos-installer
+
+Get the exact ISO for this release (requires a 4.20.21 `openshift-install` binary):
+
+```bash
+openshift-install coreos print-stream-json | grep '\.iso[^.]' | grep x86_64
+wget <ISO_URL_FROM_ABOVE> -O rhcos-4.20-live.x86_64.iso
+```
+
+Get `coreos-installer` (any recent build from `https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/coreos-installer/`):
+
+```bash
+wget https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/coreos-installer/latest/coreos-installer_amd64 -O coreos-installer
+chmod +x coreos-installer
+```
+
+### 5.3 Prepare master01's network keyfile(s)
+
+Reuse the **original** file(s) for master01 unchanged — same interface name, IP, gateway, DNS, MTU and static routes. Example layout (replace values with master01's real ones):
+
+```ini
+[connection]
+id=<IFNAME>
+autoconnect-priority=-100
+autoconnect-retries=1
+type=ethernet
+multi-connect=1
+interface-name=<IFNAME>
+
+[ethernet]
+mtu=<MTU>
+
+[ipv4]
+address1=<MASTER01_IP>/<PREFIX>,<GATEWAY>
+dns=<DNS_IP>;
+dns-search=<DOMAIN>;
+method=manual
+
+[route]
+routes=<REMOTE_SUBNET>/<PREFIX> via <GATEWAY>
+```
+
+Checks:
+
+- The static route to the network where the API load balancer / mirror lives is present (first boot must reach `api-int.3novvt.samsungcnfcu.local:22623` and `:6443`).
+- If the hardware changed, verify the NIC name by booting the plain live ISO once and running `nmcli device` before building the customized ISO.
+- If master01 used a bond, include the bond file and both port files.
+
+### 5.4 Create the ISO
+
+Single NIC:
+
+```bash
+./coreos-installer iso customize \
+  --dest-device /dev/sda \
+  --dest-ignition master01-new.ign \
+  --network-keyfile m1-<IFNAME>.nmconnection \
+  -o master01-replace.iso rhcos-4.20-live.x86_64.iso
+```
+
+Bonded NICs:
+
+```bash
+./coreos-installer iso customize \
+  --dest-device /dev/sda \
+  --dest-ignition master01-new.ign \
+  --network-keyfile m1-bond0.nmconnection \
+  --network-keyfile m-bond0-port1.nmconnection \
+  --network-keyfile m-bond0-port2.nmconnection \
+  -o master01-replace.iso rhcos-4.20-live.x86_64.iso
+```
+
+> **Warning:** `--dest-device /dev/sda` performs an unattended install and wipes that disk. Confirm `/dev/sda` is the intended OS disk on master01 (check from the live ISO with `lsblk` if unsure).
+
+---
+
+## 6. Reinstall master01
+
+1. Mount `master01-replace.iso` via virtual media (or USB) and boot master01 from it.
+2. The host installs RHCOS automatically and reboots. **Eject the ISO** after the first reboot.
+3. On first boot from disk it fetches its full config from the Machine Config Server, pivots to the 4.20.21 OS image, and reboots a second time. This normally takes 10–20 minutes.
+
+Watch from the bastion:
+
+```bash
+watch -n 15 'oc get csr | grep -i pending; echo; oc get nodes'
+```
+
+### Troubleshooting first boot
+
+| Symptom on console | Likely cause | Check |
+|---|---|---|
+| Stuck at "GET https://api-int…:22623/config/master" | Network/route/DNS | From a live-ISO shell on the host: `ping <GATEWAY>`, `curl -kI https://api-int.3novvt.samsungcnfcu.local:22623/healthz`, `dig api-int.…` |
+| Hostname shows `localhost` | DNS reverse lookup missing | Ensure PTR record for master01's IP exists, or add `hostname=` via a `--dest-karg-append`/hostname file |
+| Install fails: wrong device | Disk naming differs | Boot plain live ISO, run `lsblk`, rebuild ISO with correct `--dest-device` |
+
+---
+
+## 7. Approve certificate signing requests
+
+Two rounds are required: a client CSR first, then a serving CSR 1–3 minutes after the node first appears.
+
+```bash
+oc get csr | grep Pending
+oc get csr -o name | xargs oc adm certificate approve
+# wait ~2 minutes, repeat
+oc get csr | grep Pending
+oc get csr -o name | xargs oc adm certificate approve
+```
+
+Expected:
+
+```bash
+oc get nodes
+# master01.3novvt.samsungcnfcu.local   Ready   control-plane,master   ...
+```
+
+---
+
+## 8. Verify recovery
+
+Allow up to 15 minutes after the node is `Ready` for the etcd operator to add the member and roll out static pods.
+
+```bash
+# 8.1 Node and Machine API linkage
+oc get nodes -o wide
+oc get machine,bmh -n openshift-machine-api        # machine-0 PHASE Running, bmh consumer set, ONLINE true
+
+# 8.2 etcd membership
+oc rsh -n openshift-etcd etcd-master02.3novvt.samsungcnfcu.local etcdctl member list -w table
+# 3 rows, all STATUS=started
+oc rsh -n openshift-etcd etcd-master02.3novvt.samsungcnfcu.local etcdctl endpoint health --cluster
+
+# 8.3 Control-plane pods on the new node
+oc get pods -n openshift-etcd -o wide | grep master01
+oc get pods -n openshift-kube-apiserver -o wide | grep master01
+oc get pods -n openshift-kube-controller-manager -o wide | grep master01
+oc get pods -n openshift-kube-scheduler -o wide | grep master01
+
+# 8.4 Operators
+oc get co etcd kube-apiserver kube-controller-manager kube-scheduler
+# DEGRADED must be False on all four
+
+# 8.5 Cluster version
+oc get clusterversion
+# PROGRESSING False, no "Unable to apply" message
+
+# 8.6 MachineConfigPool
+oc get mcp master
+# MACHINECOUNT 3, READYMACHINECOUNT 3, DEGRADED False
+```
+
+### 8.7 Load balancer
+
+Re-enable master01 in the HAProxy/external LB backends for ports **6443** and **22623** (and 80/443 if ingress runs on masters). Confirm the health check goes green.
+
+```bash
+# on the HAProxy host
+echo "show stat" | sudo socat stdio /var/run/haproxy/admin.sock | grep -i master01
+```
+
+---
+
+## 9. Post-recovery troubleshooting
+
+| Problem | Diagnosis | Fix |
+|---|---|---|
+| etcd stays at 2 members after node is Ready | Leftover `etcd-*-master01` secret, or node joined with a different name | Re-run step 2.3; confirm `oc get nodes` shows the exact FQDN `master01.3novvt.samsungcnfcu.local`. Check `oc logs -n openshift-etcd-operator deploy/etcd-operator`. |
+| etcd operator logs "member already exists" | `member remove` was skipped | Repeat step 2.2 from a healthy etcd pod. |
+| etcd operator idle, no new revision | Rollout not triggered | `oc patch etcd cluster --type=merge -p='{"spec":{"forceRedeploymentReason":"recovery-'"$(date +%s)"'"}}'` |
+| Machine stuck `Provisioning`, node Ready | Node not linked to BMH | Compare node's MAC/IP with `bmh.spec.bootMACAddress` and `status.hardware.nics`; fix MAC (step 3) and wait. |
+| kube-apiserver Degraded with NodeInstallerDegraded | Normal while new revisions roll out | Wait; check `oc get pods -n openshift-kube-apiserver` for installer pods completing. |
+| CSRs keep reappearing as Pending | Approver only approves known names | Approve manually; ensure Machine object exists (step 4), which is what makes auto-approval work. |
+
+---
+
+## 10. Rollback / safety notes
+
+- Nothing in steps 1–4 can be "undone" in the traditional sense, but the cluster remains fully functional on two masters throughout; the only risk window is a second master failing before master01 rejoins.
+- If the reinstall fails, the cluster is left in the same degraded-but-available state it started in. Simply fix the cause and redo steps 5–7.
+- Keep the etcd backup from step 1 for at least 7 days after successful recovery.
+- Never run `etcdctl member remove` against a member that is currently healthy, and never remove two members.
+
+---
+
+## 11. Completion checklist
+
+- [ ] etcd backup stored off-cluster
+- [ ] `etcdctl member list` shows 3 started members
+- [ ] `oc get co` — no operator Degraded
+- [ ] `oc get clusterversion` — Progressing False
+- [ ] `oc get mcp master` — 3/3 ready
+- [ ] master01 re-enabled in HAProxy (6443, 22623)
+- [ ] Machine `3novvt-csrrj-master-0` Running, BMH consumer set
+- [ ] ISO and ignition file removed from shared locations (ignition contains cluster credentials)
+- [ ] Ticket updated with timestamps and any deviations
+
+---
+
+## Appendix A – Quick command card
+
+```bash
+# backup
+oc debug node/master02.3novvt.samsungcnfcu.local -- chroot /host /usr/local/bin/cluster-backup.sh /home/core/assets/backup
+# etcd
+oc rsh -n openshift-etcd etcd-master02.3novvt.samsungcnfcu.local   # member list / member remove <ID>
+oc delete secret -n openshift-etcd etcd-{peer,serving,serving-metrics}-master01.3novvt.samsungcnfcu.local
+# objects
+oc delete node master01.3novvt.samsungcnfcu.local
+oc delete machine 3novvt-csrrj-master-0 -n openshift-machine-api
+oc apply -f master-0-new.yaml
+# ignition + iso
+oc extract -n openshift-machine-api secret/master-user-data-managed --keys=userData --to=- > master01-new.ign
+./coreos-installer iso customize --dest-device /dev/sda --dest-ignition master01-new.ign --network-keyfile m1-<IFNAME>.nmconnection -o master01-replace.iso rhcos-4.20-live.x86_64.iso
+# csr
+oc get csr -o name | xargs oc adm certificate approve
+# verify
+oc get nodes; oc get co etcd kube-apiserver; oc get machine,bmh -n openshift-machine-api
+```
+
+## Appendix B – References
+
+- OpenShift 4 docs → Backup and restore → *Replacing an unhealthy etcd member*
+- OpenShift 4 docs → Installing on bare metal → *Installing RHCOS by using an ISO image* (`coreos-installer iso customize`)
+- Internal doc: "OCP ISO creation for bootstrap and master nodes" (SRI-Bangalore, Jan 2026) — source of the keyfile and `iso customize` conventions used here
